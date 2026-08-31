@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "py-auth"
+version = "0.0.1"
+authors = [
+  { name="Olatunji Jamaldeen", email="jamaldeen.o@yahoo.com" },
+]
+description = "Core auth primitives for py-auth"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+
+dependencies = [
+    "PyJWT",
+    "pydantic>=2.0.0,<3.0.0",
+]
+
+[project.optional-dependencies]
+postgres = ["asyncpg"]
+mysql = ["aiomysql"]
+sqlite = ["aiosqlite"]
+
+[project.urls]
+Github = "https://github.com/jamaldeen09/py-auth"
+
+[tool.setuptools.packages.find]
+where = ["src"]
