@@ -3,13 +3,13 @@ requires = ["setuptools>=61.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "py-auth"
+name = "py-auth-sqlalchemy"
 version = "0.0.1"
 authors = [
   { name = "Olatunji Jamaldeen", email = "jamaldeen.o@yahoo.com" },
 ]
-description = "Core auth primitives and provider framework for py-auth."
-readme = "README.MD"
+description = "High-performance, async SQLAlchemy adapter for py-auth."
+readme = "README.md"
 requires-python = ">=3.9"
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -24,14 +24,10 @@ classifiers = [
 license = { text = "MIT" }
 
 dependencies = [
-    "pydantic>=2.0.0,<3.0.0",
-    "typing-extensions>=4.0.0",
+    "sqlalchemy>=2.0.0",
+    "greenlet>=3.0.0",
+    "py-auth>=0.0.1",
 ]
-
-[project.optional-dependencies]
-postgres = ["asyncpg>=0.28.0"]
-mysql = ["aiomysql>=0.2.0"]
-sqlite = ["aiosqlite>=0.19.0"]
 
 [project.urls]
 "Homepage" = "https://github.com/jamaldeen09/py-auth"

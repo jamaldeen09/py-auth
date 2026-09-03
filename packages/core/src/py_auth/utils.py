@@ -1,70 +1,119 @@
-from typing import Any
-from datetime import datetime, timezone, timedelta
-import jwt, sys
+import os, copy, hashlib, secrets
 
-def clean_value(original_value: Any, data_type: type):
-    DEFAULT_MAP = {str: "", int: 0, float: 0.0, callable: lambda: None}
+from typing import Any, Dict, Mapping, Optional, Union
 
-    new_value = original_value
-    # Check if data_type is callable, if it is then properly check
-    # if the original value is a function by running callable()
+from .schemas import CookieConfig, PyAuthCookiesInput
+
+
+def clean_value(original_value: Any, data_type: type) -> Any:
+    """Sanitize and coerce incoming raw values to expected types with safe fallbacks."""
+    default_map = {str: "", int: 0, float: 0.0, callable: lambda: None}
+
     if data_type == callable:
         if not (original_value is not None and callable(original_value)):
-            new_value = DEFAULT_MAP[data_type]
+            return default_map[data_type]
+        return original_value
 
+    if not isinstance(original_value, data_type):
+        return default_map.get(data_type, None)
+
+    return original_value
+
+def generate_token(num_bytes: int = 32) -> str:
+    """Generate a cryptographically secure URL-safe token."""
+    return secrets.token_urlsafe(num_bytes)
+
+
+def hash_token(token: str) -> str:
+    """Produce a SHA-256 hash digest of a given token string."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def merge_cookie_config(
+    user_config: Optional[Union[PyAuthCookiesInput, Dict[str, Any]]] = None,
+    *,
+    is_production: bool = os.environ.get("ENVIRONMENT", "development") == "production",
+) -> Dict[str, Dict[str, Any]]:
+    """Merge user cookie options with safe defaults based on environment."""
+    _DEFAULTS = {
+        "session_token": {
+            "name": "__Host-py_auth_session",
+            "options": {
+                "http_only": True,
+                "secure": True,
+                "same_site": "lax",
+                "path": "/",
+                "max_age": 30 * 24 * 60 * 60,
+            },
+        },
+        "csrf_token": {
+            "name": "py_auth_csrf",
+            "options": {
+                "http_only": False,
+                "secure": True,
+                "same_site": "lax",
+                "path": "/",
+                "max_age": 60 * 60,
+            },
+        },
+    }
+
+    if isinstance(user_config, PyAuthCookiesInput):
+        user_config_dict = user_config.model_dump(exclude_unset=True)
+    elif isinstance(user_config, dict):
+        user_config_dict = user_config
     else:
-        if not isinstance(original_value, data_type):
-            new_value = DEFAULT_MAP.get(data_type, None)
+        user_config_dict = {}
 
-    # Return the newly cleaned value
-    return new_value
+    result: Dict[str, Dict[str, Any]] = {}
+    defaults = copy.deepcopy(_DEFAULTS)
 
+    # Ensure 'secure' default reflects production environment unless explicitly specified
+    for cfg in defaults.values():
+        if "options" in cfg and cfg["options"].get("secure") is None:
+            cfg["options"]["secure"] = bool(is_production)
 
-def create_token(payload: dict[str, Any], secret: str) -> str:
-    to_encode = payload.copy()
-    expires_delta = timedelta(hours=1)
-    expire = datetime.now(timezone.utc) + expires_delta
-    
-    # Standard JWT expiration claim
-    to_encode.update({"exp": expire})
-    
-    encoded_jwt = jwt.encode(to_encode, secret, algorithm="HS256")
-    return encoded_jwt
+    keys = set(defaults.keys()) | set(user_config_dict.keys())
 
+    for key in keys:
+        default_cfg = defaults.get(
+            key,
+            {"name": key, "options": {"path": "/", "secure": bool(is_production)}},
+        )
+        user_val = user_config_dict.get(key)
 
-def log(level: str, message: str, details: str = None):
-    """
-    Prints a distinctively branded, modern terminal log for py_auth.
-    """
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-    # ANSI Color Codes & Styles
-    RESET = "\033[0m"
-    DIM = "\033[2m"
-    
-    # Signature branding badge for the py-auth (Magenta/Purple background)
-    BRAND_BADGE = "\033[45m\033[37m py-auth \033[0m"
-    
-    # Level-specific badge styling
-    if level.upper() == "INFO":
-        level_badge = f"{DIM}[INFO]{RESET}"
-        text_color = "\033[36m" # Cyan
-    elif level.upper() == "SUCCESS":
-        level_badge = "\033[32m✔ SUCCESS\033[0m"
-        text_color = "\033[32m"
-    elif level.upper() == "WARNING":
-        level_badge = "\033[33m⚠ WARNING\033[0m"
-        text_color = "\033[33m"
-    elif level.upper() == "ERROR":
-        level_badge = "\033[31m✖ ERROR\033[0m"
-        text_color = "\033[31m"
-    else:
-        level_badge = "[LOG]"
-        text_color = RESET
+        merged_name = default_cfg.get("name", key)
+        merged_opts = dict(default_cfg.get("options", {}))
 
-    # Output the structured, branded log line
-    print(f"{DIM}{timestamp}{RESET} {BRAND_BADGE} {level_badge} {text_color}{message}{RESET}", file=sys.stderr)
-    
-    # Optional diagnostic detail line
-    if details:
-        print(f"             {DIM}╰─ {details}{RESET}", file=sys.stderr)
+        if isinstance(user_val, str):
+            merged_name = user_val
+        elif isinstance(user_val, Mapping):
+            parsed = (
+                CookieConfig.model_validate(user_val)
+                if hasattr(CookieConfig, "model_validate")
+                else CookieConfig.parse_obj(user_val)
+            )
+            if parsed.name is not None:
+                merged_name = parsed.name
+            if parsed.options is not None:
+                dump = (
+                    parsed.options.model_dump(exclude_none=True)
+                    if hasattr(parsed.options, "model_dump")
+                    else parsed.options.dict(exclude_none=True)
+                )
+                merged_opts.update(dump)
+        elif isinstance(user_val, CookieConfig):
+            if user_val.name is not None:
+                merged_name = user_val.name
+            if user_val.options is not None:
+                dump = (
+                    user_val.options.model_dump(exclude_none=True)
+                    if hasattr(user_val.options, "model_dump")
+                    else user_val.options.dict(exclude_none=True)
+                )
+                merged_opts.update(dump)
+
+        merged_opts.setdefault("secure", bool(is_production))
+        result[key] = {"name": merged_name, "options": merged_opts}
+
+    return result
