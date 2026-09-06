@@ -100,7 +100,7 @@ class PyAuth:
       await self.adapter.delete_session_by_id(session_id)
       return self.get_auth_result(data={"signed_out": True})
 
-    async def signin_with_credentials(self, data: Dict[str, Any]) -> AuthResult:
+    async def signin_with_credentials(self, request_body: Dict[str, Any]) -> AuthResult:
         """Authenticate user credentials, create a session, and return session tokens."""
         credentials_provider = self._provider_map.get("credentials")
 
@@ -111,7 +111,7 @@ class PyAuth:
             "message": "Credentials provider is not configured."
           })
 
-        result = await credentials_provider.handle_request(data=data)
+        result = await credentials_provider.handle_request(request_body)
         error = result["error"]
         user_data = result["data"]
 
