@@ -1,23 +1,8 @@
-import os, copy, hashlib, secrets
+import os, copy, hashlib, secrets, logging
 
 from typing import Any, Dict, Mapping, Optional, Union
 
 from .schemas import CookieConfig, PyAuthCookiesInput
-
-
-def clean_value(original_value: Any, data_type: type) -> Any:
-    """Sanitize and coerce incoming raw values to expected types with safe fallbacks."""
-    default_map = {str: "", int: 0, float: 0.0, callable: lambda: None}
-
-    if data_type == callable:
-        if not (original_value is not None and callable(original_value)):
-            return default_map[data_type]
-        return original_value
-
-    if not isinstance(original_value, data_type):
-        return default_map.get(data_type, None)
-
-    return original_value
 
 def generate_token(num_bytes: int = 32) -> str:
     """Generate a cryptographically secure URL-safe token."""
@@ -28,6 +13,14 @@ def hash_token(token: str) -> str:
     """Produce a SHA-256 hash digest of a given token string."""
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
+def get_logger():
+    """Retrieve the centralized namespaced logger for the py-auth library.
+    
+    Using a dedicated namespace ('py_auth') allows consuming applications 
+    to configure logging levels, formats, or handlers specifically for this 
+    package without polluting or altering the main application's logs.
+    """
+    return logging.getLogger("py_auth")
 
 def merge_cookie_config(
     user_config: Optional[Union[PyAuthCookiesInput, Dict[str, Any]]] = None,

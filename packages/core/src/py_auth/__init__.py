@@ -12,11 +12,7 @@ from .exceptions import (
     PyAuthError,
     RecordNotFoundError,
 )
-from .providers.credentials import (
-    CredentialField,
-    CredentialsConfig,
-    CredentialsProvider,
-)
+from .providers.credentials import CredentialsProvider
 from .schemas import (
     AdapterContainer,
     AuthError,
@@ -31,8 +27,6 @@ __all__ = [
     "PyAuth",
     "BaseProvider",
     "CredentialsProvider",
-    "CredentialField",
-    "CredentialsConfig",
     "PyAuthError",
     "DuplicateEntryError",
     "ForeignKeyViolationError",

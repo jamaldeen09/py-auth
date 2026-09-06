@@ -11,21 +11,17 @@ from typing import (
     runtime_checkable,
 )
 from pydantic import BaseModel, ConfigDict, field_validator
-from typing_extensions import NotRequired
-
 from .exceptions import ConfigurationError
 
-
 class AuthError(TypedDict):
+    code: str
     status_code: int
     message: str
-    validation_errors: NotRequired[list[dict[str, Any]]]
-
+    details: Optional[Dict[str, Any]]
 
 class AuthResult(TypedDict):
     data: Optional[Any]
     error: Optional[AuthError]
-
 
 class CookieOptions(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -39,16 +35,13 @@ class CookieOptions(BaseModel):
     expires: Optional[datetime.datetime] = None
     encode: Optional[Callable[[str], str]] = None
 
-
 class CookieConfig(BaseModel):
     name: Optional[str] = None
     options: Optional[CookieOptions] = None
 
-
 class PyAuthCookiesInput(BaseModel):
     session_token: Optional[CookieConfig] = None
     csrf_token: Optional[CookieConfig] = None
-
 
 @runtime_checkable
 class PyAuthAdapterProtocol(Protocol):
@@ -56,14 +49,9 @@ class PyAuthAdapterProtocol(Protocol):
 
     async def create_user(self, user_data: Dict[str, Any]) -> Dict[str, Any]: ...
     async def create_session(self, session_data: Dict[str, Any]) -> Dict[str, Any]: ...
-    async def get_session_by_session_token_hash(
-        self, session_token_hash: str
-    ) -> Optional[Dict[str, Any]]: ...
-    async def delete_session_by_session_token_hash(
-        self, session_token_hash: str
-    ) -> None: ...
+    async def get_session_by_session_token_hash(self, session_token_hash: str) -> Optional[Dict[str, Any]]: ...
+    async def delete_session_by_session_token_hash(self, session_token_hash: str) -> None: ...
     async def delete_session_by_id(self, session_id: str) -> None: ...
-
 
 class AdapterContainer(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -73,11 +61,9 @@ class AdapterContainer(BaseModel):
     @classmethod
     def validate_adapter_interface(cls, v: Any) -> Any:
         if not isinstance(v, PyAuthAdapterProtocol):
-            raise ConfigurationError(
-                "Invalid adapter provided. The adapter must implement the full 'PyAuthAdapterProtocol'."
-            )
+            raise ConfigurationError("The provided adapter is missing required methods or attributes defined in 'PyAuthAdapterProtocol'.")
+        
         return v
-
 
 __all__ = [
     "AuthError",

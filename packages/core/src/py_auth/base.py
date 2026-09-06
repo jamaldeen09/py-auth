@@ -13,7 +13,7 @@ class BaseProvider(ABC):
         self.id = self.__class__.__name__.lower().replace("provider", "")
 
     @abstractmethod
-    async def authenticate(self, *args: Any, **kwargs: Any) -> AuthResult:
+    async def handle_request(self, *args: Any, **kwargs: Any) -> AuthResult:
         pass
 
 
