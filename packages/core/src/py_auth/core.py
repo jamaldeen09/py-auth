@@ -3,7 +3,7 @@ import hmac
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
-from .exceptions import DuplicateEntryError, AdapterError
+from .exceptions import DuplicateEntryError, AdapterError, ForeignKeyViolationError
 from .utils import generate_token, hash_token, merge_cookie_config, get_logger
 from .schemas import (
     AdapterContainer,
@@ -24,7 +24,7 @@ class PyAuth:
         container = AdapterContainer(adapter=adapter)
         self.adapter = container.adapter
         self.cookies = merge_cookie_config(user_config=cookies)
-        self._provider_map = {getattr(p, "id", None): p for p in providers}
+        self._provider_map = {getattr(p, "id", None): p for p in (providers or [])}
 
     def get_auth_result(
         self,
@@ -97,19 +97,20 @@ class PyAuth:
         return self.get_auth_result(data={"session": session})
 
     async def signout(self, session_id: str) -> AuthResult:
-      await self.adapter.delete_session_by_id(session_id)
-      return self.get_auth_result(data={"signed_out": True})
+        """Invalidate and delete the session identified by session_id."""
+        await self.adapter.delete_session_by_id(session_id)
+        return self.get_auth_result(data={"signed_out": True})
 
     async def signin_with_credentials(self, request_body: Dict[str, Any]) -> AuthResult:
         """Authenticate user credentials, create a session, and return session tokens."""
         credentials_provider = self._provider_map.get("credentials")
 
         if not credentials_provider:
-          return self.get_auth_result(error={
-            "code": "ConfigurationError",
-            "status_code": 500,
-            "message": "Credentials provider is not configured."
-          })
+            return self.get_auth_result(error={
+                "code": "ConfigurationError",
+                "status_code": 500,
+                "message": "Credentials provider is not configured.",
+            })
 
         result = await credentials_provider.handle_request(request_body)
         error = result["error"]
@@ -118,7 +119,7 @@ class PyAuth:
         if error:
             return self.get_auth_result(error=error)
 
-        expires = datetime.now(timezone.utc) + timedelta(days=30)
+        expires = (datetime.now(timezone.utc) + timedelta(days=30)).replace(tzinfo=None)
         session_token = generate_token(num_bytes=48)
         csrf_token = generate_token(num_bytes=32)
 
@@ -136,11 +137,12 @@ class PyAuth:
                     }
                 )
                 break
+
             except DuplicateEntryError:
                 session_token = generate_token(num_bytes=48)
             
             except AdapterError as e:
-                get_logger().exception("Database adapter error occurred while creating session.")
+                get_logger().exception("Database adapter error occurred while creating session:", e)
                 status_code = getattr(e, "status_code", 500)
                 return self.get_auth_result(
                     error={
@@ -149,9 +151,20 @@ class PyAuth:
                         "message": str(e) or "A database error occurred while creating your session. Please try again."
                     }
                 )
+            
+            except ForeignKeyViolationError as e:
+                get_logger().exception("Foreign key violation occurred while creating session: referenced user record not found.", e)
+                status_code = getattr(e, "status_code", 400)
+                return self.get_auth_result(
+                    error={
+                        "code": "ForeignKeyViolation",
+                        "status_code": status_code,
+                        "message": "The user account associated with this login no longer exists."
+                    }
+                )
 
             except Exception as e:
-                get_logger().exception("Unexpected error occurred during session creation.")
+                get_logger().exception("Unexpected error occurred during session creation:", e)
                 status_code = getattr(e, "status_code", 500)
                 return self.get_auth_result(
                     error={

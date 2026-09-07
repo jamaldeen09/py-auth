@@ -13,7 +13,7 @@ from typing import (
 from pydantic import BaseModel, ConfigDict, field_validator
 from .exceptions import ConfigurationError
 
-class AuthError(TypedDict):
+class AuthError(TypedDict, total=False):
     code: str
     status_code: int
     message: str
@@ -47,7 +47,6 @@ class PyAuthCookiesInput(BaseModel):
 class PyAuthAdapterProtocol(Protocol):
     """Defines the strict structural contract that any py-auth adapter must implement."""
 
-    async def create_user(self, user_data: Dict[str, Any]) -> Dict[str, Any]: ...
     async def create_session(self, session_data: Dict[str, Any]) -> Dict[str, Any]: ...
     async def get_session_by_session_token_hash(self, session_token_hash: str) -> Optional[Dict[str, Any]]: ...
     async def delete_session_by_session_token_hash(self, session_token_hash: str) -> None: ...

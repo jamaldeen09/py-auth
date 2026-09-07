@@ -9,7 +9,7 @@ authors = [
   { name = "Olatunji Jamaldeen", email = "jamaldeen.o@yahoo.com" },
 ]
 description = "Core auth primitives and provider framework for py-auth."
-readme = "README.MD"
+readme = "README.md"
 requires-python = ">=3.9"
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -18,6 +18,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]

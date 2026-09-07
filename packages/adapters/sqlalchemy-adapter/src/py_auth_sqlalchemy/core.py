@@ -8,13 +8,15 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 class SqlAlchemyAdapter:
     """SQLAlchemy ORM adapter for py-auth.
 
-    Provides asynchronous persistence for users and sessions using SQLAlchemy 2.0.
+    Provides asynchronous session persistence using SQLAlchemy 2.0.
+    User lookup and creation is handled entirely within the authorize()
+    callback of your CredentialsProvider.
     """
 
     def __init__(
         self,
         engine: AsyncEngine,
-        session_model: Type[Any] = None,
+        session_model: Optional[Type[Any]] = None,
     ):
         self.session_model = validate_sqlalchemy_model(
             model=session_model,
@@ -34,6 +36,7 @@ class SqlAlchemyAdapter:
         cols = [c.name for c in instance.__table__.columns]
         return {name: getattr(instance, name) for name in cols}
  
+
     async def create_session(self, session_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create and persist a new session record."""
         async with handle_db_errors(operation="create_session"):
@@ -41,7 +44,8 @@ class SqlAlchemyAdapter:
                 async with session.begin():
                     s = self.session_model(**session_data)
                     session.add(s)
-                await session.refresh(s)
+                    await session.flush()
+                    await session.refresh(s)
                 return self._row_to_dict(s)
 
     async def get_session_by_session_token_hash(

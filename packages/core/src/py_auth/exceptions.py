@@ -22,11 +22,9 @@ class ForeignKeyViolationError(PyAuthError):
     """Raised when a foreign key constraint violation occurs (HTTP 400)."""
     status_code: int = 400
 
-
 class RecordNotFoundError(PyAuthError):
     """Raised when a requested database record cannot be found (HTTP 404)."""
     status_code: int = 404
-
 
 class AdapterError(PyAuthError):
     """Raised when an adapter or database engine is misconfigured or fails setup (HTTP 500)."""
