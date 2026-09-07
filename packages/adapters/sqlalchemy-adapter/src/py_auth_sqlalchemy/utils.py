@@ -1,6 +1,7 @@
+
+
 from contextlib import asynccontextmanager
 from typing import Any, Optional, Set, Type
-
 from py_auth.exceptions import (
     AdapterError,
     DuplicateEntryError,
@@ -11,7 +12,6 @@ from py_auth.exceptions import (
 from sqlalchemy import inspect
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncEngine
-
 
 def validate_async_engine(engine: object) -> AsyncEngine:
     """Validate that the engine is an asynchronous SQLAlchemy AsyncEngine

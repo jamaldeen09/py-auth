@@ -1,7 +1,2 @@
-annotated-types==0.8.0
-pydantic==2.13.5
-pydantic_core==2.46.5
-PyJWT==2.13.0
-SQLAlchemy==2.0.52
-typing-inspection==0.4.4
-typing_extensions==4.16.0
+sqlalchemy>=2.0.0
+greenlet>=3.0.0
