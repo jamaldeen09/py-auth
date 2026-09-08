@@ -1,9 +1,9 @@
-
 from .utils import handle_db_errors, validate_async_engine, validate_sqlalchemy_model
 
 from typing import Any, Dict, Optional, Type
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
+
 
 class SqlAlchemyAdapter:
     """SQLAlchemy ORM adapter for py-auth.
@@ -21,7 +21,13 @@ class SqlAlchemyAdapter:
         self.session_model = validate_sqlalchemy_model(
             model=session_model,
             model_name="Session",
-            required_cols={"id", "session_token_hash", "user_id", "expires", "csrf_token"},
+            required_cols={
+                "id",
+                "session_token_hash",
+                "user_id",
+                "expires",
+                "csrf_token",
+            },
         )
 
         self.engine = validate_async_engine(engine=engine)
@@ -35,7 +41,6 @@ class SqlAlchemyAdapter:
             return None
         cols = [c.name for c in instance.__table__.columns]
         return {name: getattr(instance, name) for name in cols}
- 
 
     async def create_session(self, session_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create and persist a new session record."""
@@ -47,6 +52,27 @@ class SqlAlchemyAdapter:
                     await session.flush()
                     await session.refresh(s)
                 return self._row_to_dict(s)
+
+    async def update_session(
+        self, session_id: str, updates: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
+        async with handle_db_errors(operation="update_session"):
+            async with self.session_maker() as session:
+                async with session.begin():
+                    stmt = (
+                        select(self.session_model)
+                        .where(self.session_model.id == session_id)
+                        .with_for_update()
+                    )
+                    result = await session.execute(stmt)
+                    s = result.scalars().first()
+                    if s is None:
+                        return None
+                    for k, v in updates.items():
+                        if hasattr(s, k) and k != "id":
+                            setattr(s, k, v)
+            await session.refresh(s)
+            return self._row_to_dict(s)
 
     async def get_session_by_session_token_hash(
         self, session_token_hash: str
@@ -63,7 +89,9 @@ class SqlAlchemyAdapter:
                     return None
                 return self._row_to_dict(s)
 
-    async def delete_session_by_session_token_hash(self, session_token_hash: str) -> None:
+    async def delete_session_by_session_token_hash(
+        self, session_token_hash: str
+    ) -> None:
         """Delete a session record by its hashed session token."""
         async with handle_db_errors(operation="delete_session_by_session_token_hash"):
             async with self.session_maker() as session:
@@ -73,7 +101,7 @@ class SqlAlchemyAdapter:
                     )
                     await session.execute(stmt)
 
-    async def delete_session_by_id(self, session_id: Any) -> None:
+    async def delete_session(self, session_id: Any) -> None:
         """Delete a session record by its unique identifier."""
         async with handle_db_errors(operation="delete_session_by_id"):
             async with self.session_maker() as session:

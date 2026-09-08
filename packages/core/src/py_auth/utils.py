@@ -4,6 +4,7 @@ from typing import Any, Dict, Mapping, Optional, Union
 
 from .schemas import CookieConfig, PyAuthCookiesInput
 
+
 def generate_token(num_bytes: int = 32) -> str:
     """Generate a cryptographically secure URL-safe token."""
     return secrets.token_urlsafe(num_bytes)
@@ -13,11 +14,12 @@ def hash_token(token: str) -> str:
     """Produce a SHA-256 hash digest of a given token string."""
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
+
 def get_logger():
     """Retrieve the centralized namespaced logger for the py-auth library.
-    
-    Using a dedicated namespace ('py_auth') allows consuming applications 
-    to configure logging levels, formats, or handlers specifically for this 
+
+    Using a dedicated namespace ('py_auth') allows consuming applications
+    to configure logging levels, formats, or handlers specifically for this
     package without polluting or altering the main application's logs.
     """
     return logging.getLogger("py_auth")
@@ -46,13 +48,14 @@ _DEFAULTS = {
     },
 }
 
+
 def merge_cookie_config(
     user_config: Optional[Union[PyAuthCookiesInput, Dict[str, Any]]] = None,
     *,
     is_production: bool = os.environ.get("ENVIRONMENT", "development") == "production",
 ) -> Dict[str, Dict[str, Any]]:
     """Merge user cookie options with safe defaults based on environment."""
-    
+
     if isinstance(user_config, PyAuthCookiesInput):
         user_config_dict = user_config.model_dump(exclude_unset=True)
     elif isinstance(user_config, dict):

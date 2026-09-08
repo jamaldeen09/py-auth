@@ -157,8 +157,9 @@ Both parameters are validated immediately in `__init__`:
 |---|---|---|
 | `create_session` | `(session_data: dict) -> dict` | Inserts a new session row and returns it as a dict |
 | `get_session_by_session_token_hash` | `(token_hash: str) -> dict \| None` | Fetches a session by hashed token, or `None` if not found |
+| `update_session` | `(session_id: str, updates: dict) -> dict \| None` | Updates fields on an existing session row and returns the updated record as a dict, or `None` if not found |
 | `delete_session_by_session_token_hash` | `(token_hash: str) -> None` | Deletes a session by hashed token |
-| `delete_session_by_id` | `(session_id: Any) -> None` | Deletes a session by its primary key |
+| `delete_session` | `(session_id: Any) -> None` | Deletes a session by its primary key / ID |
 
 ---
 

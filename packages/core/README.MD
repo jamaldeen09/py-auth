@@ -65,10 +65,12 @@ Below is a minimal example using `py-auth` directly. If you're on **FastAPI**, s
 from pydantic import BaseModel, EmailStr
 from py_auth import PyAuth, CredentialsProvider
 
+
 # 1. Define your credentials schema (Pydantic v2)
 class LoginSchema(BaseModel):
     email: EmailStr
     password: str
+
 
 # 2. Implement your authorization callback
 async def authorize(credentials: dict) -> dict | None:
@@ -88,11 +90,12 @@ async def authorize(credentials: dict) -> dict | None:
     )
     return {"id": str(new_user.id), "email": new_user.email, "name": new_user.name}
 
+
 # 3. Wire everything together
 credentials_provider = CredentialsProvider(model=LoginSchema, authorize=authorize)
 
 auth = PyAuth(
-    adapter=my_adapter,          # any PyAuthAdapterProtocol-compliant adapter
+    adapter=my_adapter,  # any PyAuthAdapterProtocol-compliant adapter
     providers=[credentials_provider],
 )
 ```
@@ -140,7 +143,7 @@ A **provider** encapsulates a single authentication strategy. `py-auth` ships wi
 
 ### Adapters
 
-An **adapter** is any object that satisfies `PyAuthAdapterProtocol`. It handles all database I/O: creating users, creating sessions, and looking up / deleting sessions.
+An **adapter** is any object that satisfies `PyAuthAdapterProtocol`. It handles all database I/O: creating sessions, updating sessions and looking up / deleting sessions.
 
 `py-auth` validates your adapter at startup using a structural `Protocol` check — you'll get a clear `ConfigurationError` immediately if a required method is missing, rather than a cryptic failure later.
 
@@ -281,9 +284,9 @@ Abstract base class for all providers. Every provider that ships with `py-auth` 
 ```python
 from py_auth import BaseProvider, AuthResult
 
+
 class MyProvider(BaseProvider):
-    async def handle_request(self, *args, **kwargs) -> AuthResult:
-        ...
+    async def handle_request(self, *args, **kwargs) -> AuthResult: ...
 ```
 
 ---
@@ -300,19 +303,24 @@ class AuthResult(TypedDict):
 #### `AuthError`
 ```python
 class AuthError(TypedDict, total=False):
-    code: str          # machine-readable, e.g. "InvalidSessionToken"
-    status_code: int   # HTTP status to send to the client
-    message: str       # human-readable description
-    details: dict      # optional structured detail (e.g. validation errors)
+    code: str  # machine-readable, e.g. "InvalidSessionToken"
+    status_code: int  # HTTP status to send to the client
+    message: str  # human-readable description
+    details: dict  # optional structured detail (e.g. validation errors)
 ```
 
 #### `PyAuthAdapterProtocol`
 ```python
 class PyAuthAdapterProtocol(Protocol):
     async def create_session(self, session_data: dict) -> dict: ...
-    async def get_session_by_session_token_hash(self, token_hash: str) -> dict | None: ...
+    async def get_session_by_session_token_hash(
+        self, token_hash: str 
+    ) -> dict | None: ...
     async def delete_session_by_session_token_hash(self, token_hash: str) -> None: ...
-    async def delete_session_by_id(self, session_id: str) -> None: ...
+    async def delete_session(self, session_id: str) -> None: ...
+    async def update_session(
+        self, session_id: str, updates: Dict
+    ) -> dict | None: ...
 ```
 
 > The adapter only manages sessions. User lookup and creation live entirely inside your
@@ -327,9 +335,8 @@ class CookieOptions(BaseModel):
     same_site: Literal["lax", "strict", "none"] | None = None
     path: str | None = None
     domain: str | None = None
-    max_age: int | None = None          # seconds
+    max_age: int | None = None  # seconds
     expires: datetime | None = None
-    encode: Callable[[str], str] | None = None  # custom cookie-value encoding hook
 ```
 
 ---
@@ -362,7 +369,7 @@ You still configure the pieces you own — your providers and your `PyAuth` inst
 auth = PyAuth(adapter=my_adapter, providers=[credentials_provider])
 
 # ...then hand it to the integration. That's it.
-app.include_router(PyAuthFastAPI(auth))
+app.include_router(PyAuthFastAPI(auth), prefix="/auth", tags=["Authentication"])
 ```
 
 The integration exposes ready-made routes for sign-in, session verification, and sign-out — no manual cookie handling, no manual response construction.

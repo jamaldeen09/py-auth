@@ -1,7 +1,6 @@
-
-
 from contextlib import asynccontextmanager
-from typing import Any, Optional, Set, Type
+from typing import Any
+
 from py_auth.exceptions import (
     AdapterError,
     DuplicateEntryError,
@@ -12,6 +11,7 @@ from py_auth.exceptions import (
 from sqlalchemy import inspect
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncEngine
+
 
 def validate_async_engine(engine: object) -> AsyncEngine:
     """Validate that the engine is an asynchronous SQLAlchemy AsyncEngine
@@ -36,10 +36,10 @@ def validate_async_engine(engine: object) -> AsyncEngine:
 
 
 def validate_sqlalchemy_model(
-    model: Type[Any],
-    required_cols: Set[str],
-    model_name: Optional[str] = None,
-) -> Type[Any]:
+    model: type[Any],
+    required_cols: set[str],
+    model_name: str | None = None,
+) -> type[Any]:
     """Validate that the provided class is a valid SQLAlchemy declarative model
     and defines all required py-auth columns.
     """
@@ -53,7 +53,9 @@ def validate_sqlalchemy_model(
         mapper = inspect(model)
         col_names = {c.key for c in mapper.columns}
     except Exception as e:
-        raise AdapterError(f"Provided '{display_name}' must be a valid SQLAlchemy model class: {e}")
+        raise AdapterError(
+            f"Provided '{display_name}' must be a valid SQLAlchemy model class: {e}"
+        )
 
     if not required_cols.issubset(col_names):
         missing = sorted(required_cols - col_names)
@@ -81,7 +83,9 @@ async def handle_db_errors(operation: str):
             raise DuplicateEntryError(
                 f"Failed to complete operation '{operation}': a record with this unique value already exists."
             ) from e
-        raise PyAuthError(f"Database integrity error occurred in operation '{operation}': {e}") from e
+        raise PyAuthError(
+            f"Database integrity error occurred in operation '{operation}': {e}"
+        ) from e
 
     except NoResultFound as e:
         raise RecordNotFoundError(
@@ -91,4 +95,6 @@ async def handle_db_errors(operation: str):
     except PyAuthError:
         raise
     except Exception as e:
-        raise PyAuthError(f"An unexpected database error occurred in operation '{operation}': {e}") from e
+        raise PyAuthError(
+            f"An unexpected database error occurred in operation '{operation}': {e}"
+        ) from e
