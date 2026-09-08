@@ -6,9 +6,9 @@ build-backend = "setuptools.build_meta"
 name = "py-auth-sqlalchemy"
 version = "0.0.1"
 authors = [
-  { name = "Olatunji Jamaldeen", email = "jamaldeen.o@yahoo.com" },
+  { name = "Olatunji Jamaldeen Omotoyosi", email = "jamaldeen.o@yahoo.com" },
 ]
-description = "High-performance, async SQLAlchemy adapter for py-auth."
+description = "High-performance, async SQLAlchemy adapter for py-auth-core."
 readme = "README.md"
 requires-python = ">=3.9"
 classifiers = [
@@ -18,16 +18,16 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 
 dependencies = [
     "sqlalchemy>=2.0.0",
     "greenlet>=3.0.0",
-    "py-auth>=0.0.1",
+    "py-auth-core>=0.0.1",
 ]
 
 [project.urls]

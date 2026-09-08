@@ -1,8 +1,8 @@
 # py-auth-sqlalchemy
 
-**High-performance, async SQLAlchemy 2.0 adapter for [py-auth](https://pypi.org/project/py-auth/).**
+**High-performance, async SQLAlchemy 2.0 adapter for [py-auth-core](https://pypi.org/project/py-auth-core/).**
 
-Plug this adapter into `PyAuth` to get automatic, async session persistence across PostgreSQL, MySQL, and SQLite — with built-in error translation from SQLAlchemy exceptions into `py-auth` exceptions.
+Plug this adapter into `PyAuth` to get automatic, async session persistence across PostgreSQL, MySQL, and SQLite — with built-in error translation from SQLAlchemy exceptions into `py-auth-core` exceptions.
 
 [![PyPI version](https://img.shields.io/pypi/v/py-auth-sqlalchemy.svg)](https://pypi.org/project/py-auth-sqlalchemy/)
 [![Python versions](https://img.shields.io/pypi/pyversions/py-auth-sqlalchemy.svg)](https://pypi.org/project/py-auth-sqlalchemy/)
@@ -55,7 +55,7 @@ pip install aiomysql
 pip install aiosqlite
 ```
 
-**Requirements:** Python ≥ 3.9, SQLAlchemy ≥ 2.0, py-auth ≥ 0.0.1.
+**Requirements:** Python ≥ 3.9, SQLAlchemy ≥ 2.0, py-auth-core ≥ 0.0.1.
 
 ---
 
@@ -89,7 +89,7 @@ class Base(DeclarativeBase):
 class Session(Base):
     __tablename__ = "sessions"
 
-    # Required py-auth columns — do NOT rename these
+    # Required columns — do NOT rename these
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     session_token_hash: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     user_id: Mapped[str] = mapped_column(String, nullable=False)
@@ -165,9 +165,9 @@ Both parameters are validated immediately in `__init__`:
 
 ### Error Translation
 
-The adapter automatically maps SQLAlchemy exceptions to `py-auth` exceptions so `PyAuth` can handle them uniformly:
+The adapter automatically maps SQLAlchemy exceptions to `py-auth-core` exceptions so `PyAuth` can handle them uniformly:
 
-| SQLAlchemy exception | py-auth exception | Trigger |
+| SQLAlchemy exception | py-auth-core exception | Trigger |
 |---|---|---|
 | `IntegrityError` (unique / duplicate) | `DuplicateEntryError` (409) | Duplicate `session_token_hash` |
 | `IntegrityError` (foreign key) | `ForeignKeyViolationError` (400) | `user_id` references a non-existent user |

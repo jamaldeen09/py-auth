@@ -1,8 +1,8 @@
 # py-auth-fastapi
 
-**FastAPI integration for [py-auth](https://pypi.org/project/py-auth/).**
+**FastAPI integration for [py-auth-core](https://pypi.org/project/py-auth-core/).**
 
-Removes the boilerplate of wiring `py-auth` authentication into a FastAPI application down to a single line.
+Removes the boilerplate of wiring `py-auth-core` authentication into a FastAPI application down to a single line.
 
 [![PyPI version](https://img.shields.io/pypi/v/py-auth-fastapi.svg)](https://pypi.org/project/py-auth-fastapi/)
 [![Python versions](https://img.shields.io/pypi/pyversions/py-auth-fastapi.svg)](https://pypi.org/project/py-auth-fastapi/)
@@ -15,7 +15,7 @@ Removes the boilerplate of wiring `py-auth` authentication into a FastAPI applic
 - ✅ **One-liner setup** — Mounts as a standard FastAPI `APIRouter` with `app.include_router()`
 - ✅ **Automatic cookie handling** — Sets and clears session and CSRF cookies automatically
 - ✅ **Dependency injection** — Includes `get_current_session()` dependency factory for protecting endpoints
-- ✅ **Built-in error handling** — Converts `py-auth` errors into standard FastAPI `HTTPException` responses
+- ✅ **Built-in error handling** — Converts `py-auth-core` errors into standard FastAPI `HTTPException` responses
 
 ---
 
@@ -39,9 +39,10 @@ auth = PyAuth(...)
 
 app = FastAPI()
 
-# Mount py-auth router
+# Mount auth router
 auth_router = PyAuthFastAPI(auth)
 app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
+
 
 # Protect routes using the session dependency
 @app.get("/protected")

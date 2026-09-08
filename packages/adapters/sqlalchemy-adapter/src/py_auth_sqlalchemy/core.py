@@ -4,7 +4,6 @@ from typing import Any, Dict, Optional, Type
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
-
 class SqlAlchemyAdapter:
     """SQLAlchemy ORM adapter for py-auth.
 

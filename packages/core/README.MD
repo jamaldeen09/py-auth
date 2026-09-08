@@ -1,11 +1,11 @@
-# py-auth
+# py-auth-core
 
 **Modular, framework-agnostic authentication primitives for Python backends.**
 
-`py-auth` gives you secure session management, credential-based sign-in, CSRF protection, and a clean provider/adapter architecture — without forcing a specific ORM, web framework, or database on you.
+`py-auth-core` gives you secure session management, credential-based sign-in, CSRF protection, and a clean provider/adapter architecture — without forcing a specific ORM, web framework, or database on you.
 
-[![PyPI version](https://img.shields.io/pypi/v/py-auth.svg)](https://pypi.org/project/py-auth/)
-[![Python versions](https://img.shields.io/pypi/pyversions/py-auth.svg)](https://pypi.org/project/py-auth/)
+[![PyPI version](https://img.shields.io/pypi/v/py-auth-core.svg)](https://pypi.org/project/py-auth-core/)
+[![Python versions](https://img.shields.io/pypi/pyversions/py-auth-core.svg)](https://pypi.org/project/py-auth-core/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---
@@ -50,16 +50,16 @@
 ## Installation
 
 ```bash
-pip install py-auth
+pip install py-auth-core
 ```
 
-`py-auth` requires **Python ≥ 3.9** and **Pydantic ≥ 2.0**.
+`py-auth-core` requires **Python ≥ 3.9** and **Pydantic ≥ 2.0**.
 
 ---
 
 ## Quick Start
 
-Below is a minimal example using `py-auth` directly. If you're on **FastAPI**, see [Integrations](#integrations) — the official integration reduces this to a single line.
+Below is a minimal example using `py-auth-core` directly. If you're on **FastAPI**, see [Integrations](#integrations) — the official integration reduces this to a single line.
 
 ```python
 from pydantic import BaseModel, EmailStr
@@ -132,7 +132,7 @@ PyAuth
 
 ### Providers
 
-A **provider** encapsulates a single authentication strategy. `py-auth` ships with one built-in provider today, with more on the way:
+A **provider** encapsulates a single authentication strategy. `py-auth-core` ships with one built-in provider today, with more on the way:
 
 | Provider | Status | Description |
 |---|---|---|
@@ -145,13 +145,13 @@ A **provider** encapsulates a single authentication strategy. `py-auth` ships wi
 
 An **adapter** is any object that satisfies `PyAuthAdapterProtocol`. It handles all database I/O: creating sessions, updating sessions and looking up / deleting sessions.
 
-`py-auth` validates your adapter at startup using a structural `Protocol` check — you'll get a clear `ConfigurationError` immediately if a required method is missing, rather than a cryptic failure later.
+`py-auth-core` validates your adapter at startup using a structural `Protocol` check — you'll get a clear `ConfigurationError` immediately if a required method is missing, rather than a cryptic failure later.
 
 See [Available Adapters](#available-adapters) for ready-made options.
 
 ### Cookies
 
-`py-auth` manages two cookies:
+`py-auth-core` manages two cookies:
 
 | Cookie | Default name | Purpose |
 |---|---|---|
@@ -360,7 +360,7 @@ All exceptions inherit from `PyAuthError` and carry a `status_code` attribute fo
 
 ### FastAPI — `py-auth-fastapi`
 
-The official FastAPI integration is a separate package that removes all the boilerplate of wiring `py-auth` into a FastAPI app. **It's a single line.**
+The official FastAPI integration is a separate package that removes all the boilerplate of wiring `py-auth-core` into a FastAPI app. **It's a single line.**
 
 You still configure the pieces you own — your providers and your `PyAuth` instance — and the integration handles everything else internally: mounting the auth routes, setting and reading cookies, and returning the right HTTP responses.
 
@@ -392,7 +392,7 @@ pip install py-auth-fastapi
 
 ## Roadmap
 
-`py-auth` is in early release (`0.0.1`). Here's what's planned:
+`py-auth-core` is in early release (`0.0.1`). Here's what's planned:
 
 **Providers**
 - [ ] `GoogleProvider` — Google OAuth 2.0
