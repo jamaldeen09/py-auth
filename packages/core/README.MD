@@ -369,7 +369,7 @@ You still configure the pieces you own — your providers and your `PyAuth` inst
 auth = PyAuth(adapter=my_adapter, providers=[credentials_provider])
 
 # ...then hand it to the integration. That's it.
-app.include_router(PyAuthFastAPI(auth), prefix="/auth", tags=["Authentication"])
+app.include_router(PyAuthFastAPI(auth))
 ```
 
 The integration exposes ready-made routes for sign-in, session verification, and sign-out — no manual cookie handling, no manual response construction.

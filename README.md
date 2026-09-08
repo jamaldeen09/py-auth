@@ -87,10 +87,10 @@ credentials_provider = CredentialsProvider(model=LoginSchema, authorize=authoriz
 # 4. Initialize PyAuth
 auth = PyAuth(adapter=adapter, providers=[credentials_provider])
 
-# 5. Mount FastAPI routes
+# 5. Mount FastAPI routes (mounts /auth/* routes automatically)
 app = FastAPI()
 auth_router = PyAuthFastAPI(auth)
-app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
+app.include_router(auth_router)
 
 # 6. Protect private endpoints
 @app.get("/me")

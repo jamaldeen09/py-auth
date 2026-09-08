@@ -39,10 +39,9 @@ auth = PyAuth(...)
 
 app = FastAPI()
 
-# Mount auth router
+# Mount auth router (prefix="/auth" and tags=["Authentication"] by default)
 auth_router = PyAuthFastAPI(auth)
-app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
-
+app.include_router(auth_router)
 
 # Protect routes using the session dependency
 @app.get("/protected")

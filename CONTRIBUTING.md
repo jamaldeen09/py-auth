@@ -206,8 +206,18 @@ from py_auth.schemas import CookieConfig
 from .utils import raise_auth_exception
 
 class PyAuthFastAPI(APIRouter):
-    def __init__(self, auth: PyAuth, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(
+        self,
+        auth: PyAuth,
+        *,
+        prefix: str = "/auth",
+        tags: Optional[List[Union[str, Enum]]] = None,
+        **kwargs: Any,
+    ):
+        if tags is None:
+            tags = ["Authentication"]
+
+        super().__init__(prefix=prefix, tags=tags, **kwargs)
         self.auth = auth
         self._register_routes()
 
