@@ -2,7 +2,6 @@
 Core exception classes for py-auth.
 """
 
-
 class PyAuthError(Exception):
     """Base exception for all py-auth errors."""
 

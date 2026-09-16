@@ -1,11 +1,11 @@
 import inspect
 
 from pydantic import BaseModel, ValidationError as PydanticValidationError
-from typing import Any, Awaitable, Callable, Dict, List, Optional, TypedDict, Union, Type
+from typing import Any, Awaitable, Callable, Dict, List,  TypedDict, Union, Type
 
 from ..base import BaseProvider
 from ..schemas import AuthResult
-from ..utils import get_logger
+from ..utils import get_logger, get_auth_result
 
 
 class ValidationError(TypedDict):
@@ -34,47 +34,50 @@ class CredentialsProvider(BaseProvider):
         try:
             validated_data = self.model.model_validate(request_body)
             payload = validated_data.model_dump()
+
         except PydanticValidationError as e:
             formatted_errors: list[ValidationError] = [
                 {"field": ".".join(str(loc) for loc in err["loc"]), "errors": [err["msg"]]}
                 for err in e.errors()
             ]
 
-            return {
-                "data": None,
-                "error": {
+            return get_auth_result(
+                error={
                     "code": "ValidationError",
                     "status_code": 422,
                     "message": "Validation failed.",
-                    "details":{"validation_errors": formatted_errors}
-                },
-            }
+                    "details": {"validation_errors":formatted_errors}
+                }
+            )
 
         try:
-            if inspect.iscoroutinefunction(self.authorize):
+            is_coroutine_func = inspect.iscoroutinefunction(self.authorize)
+
+            if is_coroutine_func:
                 result = await self.authorize(payload)
             else:
                 result = self.authorize(payload)
 
             if not result:
-                return {
-                    "data": None,
-                    "error": {
-                      "code": "CredentialsSignIn",
-                      "status_code": 401, 
-                      "message": "Invalid email or password."
-                    },
-                }
-            return {"data": result, "error": None}
+                return get_auth_result(
+                    error={
+                        "code": "CredentialsSignIn",
+                        "status_code": 401,
+                        "message": "Invalid email or password."
+                    }
+                )
+            
+            return get_auth_result(data=result)
+        
         except Exception as e:
-            get_logger().exception("Unhandled exception during credentials authorization callback: %s", e)
-            return {
-                "data": None,
-                "error": {
-                    "code": "ServerError",
+            get_logger().exception("todo....")
+
+            return get_auth_result(
+                error={
+                    "code": "InternalServerError",
                     "status_code": 500,
-                    "message": "An internal server error occurred.",
-                },
-            }
+                    "message": "An internal error occured."
+                }
+            )
 
 __all__ = ["ValidationError","CredentialsProvider"]

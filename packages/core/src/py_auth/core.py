@@ -1,17 +1,16 @@
 import hmac
 
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from .exceptions import (
     DuplicateEntryError,
     ForeignKeyViolationError,
     RecordNotFoundError,
 )
-from .utils import generate_token, hash_token, merge_cookie_config, get_logger
+from .utils import generate_token, hash_token, merge_cookie_config, get_logger, get_auth_result
 from .schemas import (
     AdapterContainer,
-    AuthError,
     AuthResult,
     PyAuthCookiesInput,
 )
@@ -22,42 +21,19 @@ class PyAuth:
     def __init__(
         self,
         adapter: Any,
-        providers: Optional[List[Any]] = None,
-        cookies: Optional[PyAuthCookiesInput] = None,
+        providers: List[Any] | None = None,
+        cookies: PyAuthCookiesInput | None = None,
     ):
         container = AdapterContainer(adapter=adapter)
+
         self.adapter = container.adapter
-        self.cookies = merge_cookie_config(user_config=cookies)
         self._provider_map = {getattr(p, "id", None): p for p in (providers or [])}
-
-    def get_auth_result(
-        self,
-        data: Optional[Any] = None,
-        error: Optional[AuthError] = None,
-    ) -> AuthResult:
-        """Construct a standardized py-auth response."""
-        return {"data": data, "error": error}
-
-    def get_signin_with_credentials_result(
-        self,
-        session_token: str,
-        csrf_token: str,
-        user: Dict[str, Any],
-    ) -> AuthResult:
-        """Construct a standardized credentials sign-in success response."""
-        return {
-            "data": {
-                "session_token": session_token,
-                "csrf_token": csrf_token,
-                "user": user,
-            },
-            "error": None,
-        }
+        self.cookies = merge_cookie_config(user_config=cookies)
 
     async def verify_session(self, session_token: str, csrf_token: str) -> AuthResult:
         """Verify an active session and ensure CSRF token validity."""
         if not session_token:
-            return self.get_auth_result(
+            return get_auth_result(
                 error={
                     "code": "MissingSessionToken",
                     "status_code": 401,
@@ -66,126 +42,134 @@ class PyAuth:
             )
 
         if not csrf_token:
-            return self.get_auth_result(
+            return get_auth_result(
                 error={
                     "code": "MissingCsrfToken",
                     "status_code": 401,
                     "message": "CSRF token was not provided.",
                 }
             )
+        
+        try:
+            session_token_hash = hash_token(session_token)
+            session = await self.adapter.get_session_by_session_token_hash(session_token_hash)
 
-        session_token_hash = hash_token(session_token)
-        session = await self.adapter.get_session_by_session_token_hash(
-            session_token_hash
-        )
+            if not session:
+                return get_auth_result(
+                    error={
+                        "code": "InvalidSession",
+                        "status_code": 401,
+                        "message": "Session not found or is invalid."
+                    }
+                )
+            
+            if not isinstance(session, dict):
+                get_logger().error("Configured adapter returned invalid session data: expected a dictionary.")
 
-        if not session:
-            return self.get_auth_result(
+                return get_auth_result(
+                    error={
+                      "code": "InternalServerError",
+                      "status_code": 500,
+                      "message": "An internal error occurred.",
+                    }
+                )
+              
+            expires: datetime | None = session.get("expires", None)
+            now = datetime.now(timezone.utc)
+
+            if not isinstance(expires, datetime):
+                get_logger().error(
+                    "Invalid session data returned by the configured adapter: ",
+                    "'expires' must be a datetime instance."
+                )
+
+                return get_auth_result(
+                    error={
+                        "code": "InternalServerError",
+                        "status_code": 500,
+                        "message": "An internal error occured."
+                    }
+                )
+            
+            if expires <= now:
+                await self.adapter.delete_session_by_session_token_hash(session_token_hash)
+                
+                return get_auth_result(
+                    error={
+                        "code": "SessionExpired",
+                        "status_code": 401,
+                        "message": "Session has expired. Sign in again to continue."
+                    }
+                )
+            
+            db_csrf_token: str | None = session.get("csrf_token", None)
+
+            if not isinstance(db_csrf_token, str):
+                get_logger().error(
+                    "Invalid session data returned by the configured adapter: ",
+                    "'csrf_token' must be a valid string."
+                )
+
+                return get_auth_result(
+                    error={
+                        "code": "InternalServerError",
+                        "status_code": 500,
+                        "message": "An internal error occured."
+                    }
+                )
+            
+            compare_result = hmac.compare_digest(db_csrf_token, csrf_token)
+            if not compare_result:
+                return get_auth_result(
+                    error={
+                        "code": "InvalidCsrfToken",
+                        "status_code": 403,
+                        "message": "CSRF token validation failed."
+                    }
+                )
+            
+            return get_auth_result(data={"session":session})
+            
+        except Exception as e:
+            get_logger().exception("...")
+
+            return get_auth_result(
                 error={
-                    "code": "InvalidSessionToken",
-                    "status_code": 401,
-                    "message": "Session token not found or invalid.",
+                    "code": "InternalServerError",
+                    "status_code": 500,
+                    "message": "An internal error occured."
                 }
             )
-
-        expires = session.get("expires")
-        now = datetime.now(timezone.utc)
-        if not isinstance(expires, datetime):
-            return self.get_auth_result(
-                error={
-                    "code": "InvalidSessionData",
-                    "status_code": 401,
-                    "message": "Session expiration format is invalid.",
-                }
-            )
-
-        if expires.tzinfo is None:
-            expires = expires.replace(tzinfo=timezone.utc)
-
-        if expires <= now:
-            await self.adapter.delete_session_by_session_token_hash(session_token_hash)
-            return self.get_auth_result(
-                error={
-                    "code": "SessionExpired",
-                    "status_code": 401,
-                    "message": "Session has expired. Sign in again to continue.",
-                },
-            )
-
-        db_csrf_token = session.get("csrf_token")
-        if not db_csrf_token or not hmac.compare_digest(db_csrf_token, csrf_token):
-            return self.get_auth_result(
-                error={
-                    "code": "InvalidCsrfToken",
-                    "status_code": 403,
-                    "message": "CSRF token validation failed.",
-                }
-            )
-
-        return self.get_auth_result(data={"session": session})
 
     async def signout(self, session_id: str) -> AuthResult:
         """Invalidate and delete the session identified by session_id with error handling."""
         try:
             await self.adapter.delete_session(session_id)
-            return self.get_auth_result(data={"signed_out": True})
+            return get_auth_result(data={"signed_out":True})
         except RecordNotFoundError:
-            return self.get_auth_result(data={"signed_out": True})
+            return get_auth_result(data={"signed_out":True})
         except Exception as e:
             get_logger().exception("Unexpected error during signout:", e)
-            return self.get_auth_result(
+            return get_auth_result(
                 error={
                     "code": "InternalServerError",
                     "status_code": 500,
                     "message": "An internal error occurred.",
                 }
             )
-
-    async def update_session_csrf_token(self, session_id: str) -> AuthResult:
-        """Updates the CSRF token for a given session with error handling."""
-        new_csrf_token = generate_token(num_bytes=32)
-        try:
-            updated = await self.adapter.update_session(
-                session_id, {"csrf_token": new_csrf_token}
-            )
-            if not updated:
-                return self.get_auth_result(
-                    error={
-                        "code": "RecordNotFound",
-                        "status_code": 404,
-                        "message": "Session not found for CSRF rotation.",
-                    }
-                )
-            return self.get_auth_result(data={"csrf_token": new_csrf_token})
-
-        except RecordNotFoundError:
-            return self.get_auth_result(
-                error={
-                    "code": "RecordNotFound",
-                    "status_code": 404,
-                    "message": "Session not found.",
-                }
-            )
-        except Exception as e:
-            get_logger().exception("Unexpected error during CSRF token update:", e)
-            return self.get_auth_result(
-                error={
-                    "code": "InternalServerError",
-                    "status_code": 500,
-                    "message": "An internal error occurred.",
-                }
-            )
-
+        
     async def signin_with_credentials(self, request_body: Dict[str, Any]) -> AuthResult:
         """Authenticate user credentials, create a session, and return session tokens."""
         credentials_provider = self._provider_map.get("credentials")
 
         if not credentials_provider:
-            return self.get_auth_result(
+            get_logger().error("Attempted to call 'signin_with_credentials' but 'CredentialsProvider' is not configured.")
+
+            return get_auth_result(
                 error={
-                    "code": "ConfigurationError",
+                    "code": "InternalServerError",
                     "status_code": 500,
-                    "message": "Credentials provider is not configured.",
+                    "message": "An internal error occurred."
                 }
             )
 
@@ -194,9 +178,20 @@ class PyAuth:
         user_data = result["data"]
 
         if error:
-            return self.get_auth_result(error=error)
+            return get_auth_result(error=error)
+        
+        if not isinstance(user_data, dict):
+            get_logger().error("CredentialsProvider returned invalid user data: expected a dictionary.")
 
-        expires = (datetime.now(timezone.utc) + timedelta(days=30)).replace(tzinfo=None)
+            return get_auth_result(
+                error={
+                    "code": "InternalServerError",
+                    "status_code": 500,
+                    "message": "An internal error occured."
+                }
+            )
+
+        expires = datetime.now(timezone.utc) + timedelta(days=30)
         session_token = generate_token(num_bytes=48)
         csrf_token = generate_token(num_bytes=32)
 
@@ -205,39 +200,51 @@ class PyAuth:
         for _ in range(max_retries):
             session_token_hash = hash_token(session_token)
             try:
+                user_id = user_data.get("id", None)
+
+                if not isinstance(user_id, str):
+                    get_logger().error("CredentialsProvider returned invalid user data: expected 'id' to be a string.")
+
+                    return get_auth_result(
+                        error={
+                            "code": "InternalServerError",
+                            "status_code": 500,
+                            "message": "An internal error occured."
+                        }
+                    )
+
                 created_session = await self.adapter.create_session(
                     {
                         "session_token_hash": session_token_hash,
-                        "user_id": user_data.get("id", None),
+                        "user_id": user_id,
                         "csrf_token": csrf_token,
                         "expires": expires,
                     }
                 )
+
                 break
 
-            except DuplicateEntryError:
+            except DuplicateEntryError as e:
+                get_logger().warning("Session token hash collision occurred during session creation; retrying with a new session token.")
                 session_token = generate_token(num_bytes=48)
 
             except ForeignKeyViolationError as e:
-                get_logger().exception(
-                    "Foreign key violation occurred while creating session: referenced user record not found.",
-                    e,
-                )
-                status_code = getattr(e, "status_code", 400)
-                return self.get_auth_result(
+                get_logger().exception("Foreign key violation occurred while creating session: referenced user record not found.", e)
+                status_code: int = getattr(e, "status_code")
+                
+                return get_auth_result(
                     error={
                         "code": "ForeignKeyViolation",
                         "status_code": status_code,
-                        "message": "The user account associated with this login no longer exists.",
+                        "message": "The user associated with this login no longer exists.",
                     }
                 )
 
             except Exception as e:
-                get_logger().exception(
-                    "Unexpected error occurred during session creation:", e
-                )
+                get_logger().exception("Unexpected error occurred during session creation:", e)
                 status_code = getattr(e, "status_code", 500)
-                return self.get_auth_result(
+
+                return get_auth_result(
                     error={
                         "code": "InternalServerError",
                         "status_code": status_code,
@@ -246,14 +253,16 @@ class PyAuth:
                 )
 
         if not created_session:
-            return self.get_auth_result(
+            return get_auth_result(
                 error={
                     "code": "SessionCreationFailed",
                     "status_code": 500,
-                    "message": "Failed to create session after multiple attempts. Please try again.",
+                    "message": "Failed to create session. Please try again.",
                 }
             )
 
-        return self.get_signin_with_credentials_result(
-            session_token=session_token, csrf_token=csrf_token, user=user_data
-        )
+        return get_auth_result(data={
+            "session_token": session_token,
+            "csrf_token": csrf_token,
+            "user": user_data,
+        })

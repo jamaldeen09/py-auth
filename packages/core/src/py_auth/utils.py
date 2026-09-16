@@ -1,9 +1,8 @@
-import os, hashlib, secrets, logging
+import hashlib, secrets, logging
 
-from typing import Any, Dict, Mapping, Optional, Union
+from typing import Any
 
-from .schemas import CookieConfig, PyAuthCookiesInput
-
+from .schemas import PyAuthCookiesInput, AuthError, AuthResult, CookieConfig, CookieOptions, PyAuthCookies
 
 def generate_token(num_bytes: int = 32) -> str:
     """Generate a cryptographically secure URL-safe token."""
@@ -24,82 +23,80 @@ def get_logger():
     """
     return logging.getLogger("py_auth")
 
+def get_auth_result(data: Any | None = None, error: AuthError | None = None) -> AuthResult:
+    """Construct a standardized py-auth response."""
+    return {"data": data, "error": error}
 
-_DEFAULTS = {
-    "session_token": {
-        "name": "__Host-py_auth_session",
-        "options": {
-            "http_only": True,
-            "secure": True,
-            "same_site": "lax",
-            "path": "/",
-            "max_age": 30 * 24 * 60 * 60,
-        },
-    },
-    "csrf_token": {
-        "name": "py_auth_csrf",
-        "options": {
-            "http_only": False,
-            "secure": True,
-            "same_site": "lax",
-            "path": "/",
-            "max_age": 60 * 60,
-        },
-    },
-}
 
+_DEFAULTS = PyAuthCookies(
+    session_token=CookieConfig(
+        name="__Host-py_auth_session",
+        options=CookieOptions(
+            http_only=True,
+            secure=True,
+            same_site="lax",
+            path="/",
+            expires=None,
+            domain=None,
+            max_age=30 * 24 * 60 * 60,
+        )
+    ),
+
+    csrf_token=CookieConfig(
+        name="py_auth_csrf",
+        options=CookieOptions(
+            http_only=False,
+            secure=True,
+            same_site="lax",
+            path="/",
+            expires=None,
+            domain=None,
+            max_age=60 * 60,
+        ),
+    ),
+)
 
 def merge_cookie_config(
-    user_config: Optional[Union[PyAuthCookiesInput, Dict[str, Any]]] = None,
-    *,
-    is_production: bool = os.environ.get("ENVIRONMENT", "development") == "production",
-) -> Dict[str, Dict[str, Any]]:
-    """Merge user cookie options with safe defaults based on environment."""
+    user_config: PyAuthCookiesInput | None = None,
+) -> PyAuthCookies:
+    """Merge user cookie options with the default cookie configuration."""
 
-    if isinstance(user_config, PyAuthCookiesInput):
-        user_config_dict = user_config.model_dump(exclude_unset=True)
-    elif isinstance(user_config, dict):
-        user_config_dict = user_config
-    else:
-        user_config_dict = {}
+    session_token = _DEFAULTS.session_token
+    csrf_token = _DEFAULTS.csrf_token
 
-    # Avoid slow copy.deepcopy by constructing a shallow/dict copy inline
-    defaults = {
-        k: {"name": v["name"], "options": v["options"].copy()}
-        for k, v in _DEFAULTS.items()
-    }
+    if user_config is not None:
+        if user_config.session_token is not None:
+            session_token = CookieConfig(
+                name=(
+                    user_config.session_token.name
+                    if user_config.session_token.name is not None
+                    else _DEFAULTS.session_token.name
+                ),
+                options=CookieOptions(
+                    **_DEFAULTS.session_token.options.model_dump(),
+                    **user_config.session_token.options.model_dump(
+                        exclude_none=True
+                    )
+                    if user_config.session_token.options is not None
+                    else {},
+                ),
+            )
 
-    keys = defaults.keys() | user_config_dict.keys()
-    result: Dict[str, Dict[str, Any]] = {}
+        if user_config.csrf_token is not None:
+            csrf_token = CookieConfig(
+                name=(
+                    user_config.csrf_token.name
+                    if user_config.csrf_token.name is not None
+                    else _DEFAULTS.csrf_token.name
+                ),
+                options=CookieOptions(
+                    **_DEFAULTS.csrf_token.options.model_dump(),
+                    **user_config.csrf_token.options.model_dump(
+                        exclude_none=True
+                    )
+                    if user_config.csrf_token.options is not None
+                    else {},
+                ),
+            )
 
-    for key in keys:
-        default_cfg = defaults.get(key)
-        if default_cfg:
-            merged_name = default_cfg["name"]
-            merged_opts = default_cfg["options"].copy()
-        else:
-            merged_name = key
-            merged_opts = {"path": "/", "secure": is_production}
-
-        user_val = user_config_dict.get(key)
-
-        if isinstance(user_val, str):
-            merged_name = user_val
-        elif user_val is not None:
-            if isinstance(user_val, CookieConfig):
-                parsed = user_val
-            elif isinstance(user_val, Mapping):
-                parsed = CookieConfig.model_validate(user_val)
-            else:
-                parsed = None
-
-            if parsed:
-                if parsed.name is not None:
-                    merged_name = parsed.name
-                if parsed.options is not None:
-                    merged_opts.update(parsed.options.model_dump(exclude_none=True))
-
-        merged_opts.setdefault("secure", is_production)
-        result[key] = {"name": merged_name, "options": merged_opts}
-
-    return result
+    return PyAuthCookies(session_token=session_token,csrf_token=csrf_token)

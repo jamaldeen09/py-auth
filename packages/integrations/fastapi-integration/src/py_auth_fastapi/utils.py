@@ -1,7 +1,8 @@
 from py_auth.schemas import AuthError
 from fastapi.exceptions import HTTPException
+from typing import NoReturn
 
-def raise_auth_exception(error: AuthError):
+def raise_auth_exception(error: AuthError) -> NoReturn:
     """Helper to cleanly translate py-auth errors into FastAPI HTTPExceptions."""
     status_code = error.get("status_code", 500)
     message = error.get("message", "Something went wrong.")

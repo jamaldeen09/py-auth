@@ -12,3 +12,7 @@ venv
 # Other
 .history
 .env
+
+# Editor / local analysis (machine-specific interpreter + venv paths)
+.vscode/
+pyrightconfig.json
