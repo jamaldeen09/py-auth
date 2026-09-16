@@ -8,11 +8,29 @@ wheels/
 
 # Virtual environments
 venv
+.venv
+
+# Test & coverage artifacts
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Tooling caches
+.ruff_cache/
+.mypy_cache/
+.pyre/
 
 # Other
 .history
 .env
+.env.*
 
 # Editor / local analysis (machine-specific interpreter + venv paths)
 .vscode/
 pyrightconfig.json
+
+# OS noise
+.DS_Store
+Thumbs.db

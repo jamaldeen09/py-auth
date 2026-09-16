@@ -79,7 +79,7 @@ class PyAuth:
 
             if not isinstance(expires, datetime):
                 get_logger().error(
-                    "Invalid session data returned by the configured adapter: ",
+                    "Invalid session data returned by the configured adapter: "
                     "'expires' must be a datetime instance."
                 )
 
@@ -87,10 +87,15 @@ class PyAuth:
                     error={
                         "code": "InternalServerError",
                         "status_code": 500,
-                        "message": "An internal error occured."
+                        "message": "An internal error occurred."
                     }
                 )
-            
+
+            # Normalize timezone-naive datetimes (e.g. SQLite returns naive
+            # values) to UTC before comparing against the current UTC time.
+            if expires.tzinfo is None:
+                expires = expires.replace(tzinfo=timezone.utc)
+
             if expires <= now:
                 await self.adapter.delete_session_by_session_token_hash(session_token_hash)
                 
@@ -106,7 +111,7 @@ class PyAuth:
 
             if not isinstance(db_csrf_token, str):
                 get_logger().error(
-                    "Invalid session data returned by the configured adapter: ",
+                    "Invalid session data returned by the configured adapter: "
                     "'csrf_token' must be a valid string."
                 )
 
@@ -114,7 +119,7 @@ class PyAuth:
                     error={
                         "code": "InternalServerError",
                         "status_code": 500,
-                        "message": "An internal error occured."
+                        "message": "An internal error occurred."
                     }
                 )
             
@@ -131,13 +136,15 @@ class PyAuth:
             return get_auth_result(data={"session":session})
             
         except Exception as e:
-            get_logger().exception("...")
+            get_logger().exception(
+                "Unexpected error during session verification.", exc_info=e
+            )
 
             return get_auth_result(
                 error={
                     "code": "InternalServerError",
                     "status_code": 500,
-                    "message": "An internal error occured."
+                    "message": "An internal error occurred."
                 }
             )
 
@@ -149,7 +156,7 @@ class PyAuth:
         except RecordNotFoundError:
             return get_auth_result(data={"signed_out":True})
         except Exception as e:
-            get_logger().exception("Unexpected error during signout:", e)
+            get_logger().exception("Unexpected error during signout:", exc_info=e)
             return get_auth_result(
                 error={
                     "code": "InternalServerError",
@@ -187,7 +194,7 @@ class PyAuth:
                 error={
                     "code": "InternalServerError",
                     "status_code": 500,
-                    "message": "An internal error occured."
+                    "message": "An internal error occurred."
                 }
             )
 
@@ -209,7 +216,7 @@ class PyAuth:
                         error={
                             "code": "InternalServerError",
                             "status_code": 500,
-                            "message": "An internal error occured."
+                            "message": "An internal error occurred."
                         }
                     )
 
@@ -224,13 +231,17 @@ class PyAuth:
 
                 break
 
-            except DuplicateEntryError as e:
+            except DuplicateEntryError:
                 get_logger().warning("Session token hash collision occurred during session creation; retrying with a new session token.")
                 session_token = generate_token(num_bytes=48)
 
             except ForeignKeyViolationError as e:
-                get_logger().exception("Foreign key violation occurred while creating session: referenced user record not found.", e)
-                status_code: int = getattr(e, "status_code")
+                get_logger().exception(
+                    "Foreign key violation occurred while creating session: "
+                    "referenced user record not found.",
+                    exc_info=e,
+                )
+                status_code = getattr(e, "status_code", 400)
                 
                 return get_auth_result(
                     error={
@@ -241,13 +252,14 @@ class PyAuth:
                 )
 
             except Exception as e:
-                get_logger().exception("Unexpected error occurred during session creation:", e)
-                status_code = getattr(e, "status_code", 500)
+                get_logger().exception(
+                    "Unexpected error occurred during session creation:", exc_info=e
+                )
 
                 return get_auth_result(
                     error={
                         "code": "InternalServerError",
-                        "status_code": status_code,
+                        "status_code": 500,
                         "message": "An internal error occurred.",
                     }
                 )
@@ -265,4 +277,44 @@ class PyAuth:
             "session_token": session_token,
             "csrf_token": csrf_token,
             "user": user_data,
+        })
+
+    async def rotate_csrf(self, session_id: str) -> AuthResult:
+        """Rotate the CSRF token for an existing session.
+
+        Generates a fresh CSRF token, persists it via the adapter's
+        ``update_session`` method, and returns the new token so callers can
+        update the client-side cookie.
+        """
+        new_csrf_token = generate_token(num_bytes=32)
+
+        try:
+            updated_session = await self.adapter.update_session(
+                session_id, {"csrf_token": new_csrf_token}
+            )
+        except Exception as e:
+            get_logger().exception(
+                "Unexpected error occurred during CSRF rotation:", exc_info=e
+            )
+
+            return get_auth_result(
+                error={
+                    "code": "InternalServerError",
+                    "status_code": 500,
+                    "message": "An internal error occurred.",
+                }
+            )
+
+        if not updated_session:
+            return get_auth_result(
+                error={
+                    "code": "SessionNotFound",
+                    "status_code": 404,
+                    "message": "Session not found. Sign in again to continue.",
+                }
+            )
+
+        return get_auth_result(data={
+            "csrf_token": new_csrf_token,
+            "session": updated_session,
         })

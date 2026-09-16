@@ -66,37 +66,39 @@ def merge_cookie_config(
 
     if user_config is not None:
         if user_config.session_token is not None:
+            name = (
+                user_config.session_token.name
+                if user_config.session_token.name is not None
+                else _DEFAULTS.session_token.name
+            )
+
+            defaults = _DEFAULTS.session_token.options.model_dump()
+            overrides = (
+                user_config.session_token.options.model_dump(exclude_none=True)
+                if user_config.session_token.options is not None
+                else {}
+            )
             session_token = CookieConfig(
-                name=(
-                    user_config.session_token.name
-                    if user_config.session_token.name is not None
-                    else _DEFAULTS.session_token.name
-                ),
-                options=CookieOptions(
-                    **_DEFAULTS.session_token.options.model_dump(),
-                    **user_config.session_token.options.model_dump(
-                        exclude_none=True
-                    )
-                    if user_config.session_token.options is not None
-                    else {},
-                ),
+                name=name,
+                options=CookieOptions(**{**defaults, **overrides}),
             )
 
         if user_config.csrf_token is not None:
-            csrf_token = CookieConfig(
-                name=(
-                    user_config.csrf_token.name
-                    if user_config.csrf_token.name is not None
-                    else _DEFAULTS.csrf_token.name
-                ),
-                options=CookieOptions(
-                    **_DEFAULTS.csrf_token.options.model_dump(),
-                    **user_config.csrf_token.options.model_dump(
-                        exclude_none=True
-                    )
-                    if user_config.csrf_token.options is not None
-                    else {},
-                ),
+            name = (
+                user_config.csrf_token.name
+                if user_config.csrf_token.name is not None
+                else _DEFAULTS.csrf_token.name
             )
 
-    return PyAuthCookies(session_token=session_token,csrf_token=csrf_token)
+            defaults = _DEFAULTS.csrf_token.options.model_dump()
+            overrides = (
+                user_config.csrf_token.options.model_dump(exclude_none=True)
+                if user_config.csrf_token.options is not None
+                else {}
+            )
+            csrf_token = CookieConfig(
+                name=name,
+                options=CookieOptions(**{**defaults, **overrides}),
+            )
+
+    return PyAuthCookies(session_token=session_token, csrf_token=csrf_token)

@@ -60,8 +60,8 @@ class PyAuthFastAPI(APIRouter):
             session_token_cookie_name = self.auth.cookies.session_token.name
             session_token = request.cookies.get(session_token_cookie_name, "")
 
-            csrf_token_cookie_name = self.auth.cookies.session_token.name
-            csrf_token = request.cookies.get(csrf_token_cookie_name, "")
+            csrf_cookie_name = self.auth.cookies.csrf_token.name
+            csrf_token = request.cookies.get(csrf_cookie_name, "")
 
             result = await self.auth.verify_session(session_token, csrf_token)
             error = result.get("error", None)
@@ -70,7 +70,7 @@ class PyAuthFastAPI(APIRouter):
             if error or not data:
                 raise_auth_exception(error or {
                     "code": "InternalServerError",
-                    "message": "An internal error occured.",
+                    "message": "An internal error occurred.",
                     "status_code": 500
                 })
 
@@ -79,10 +79,10 @@ class PyAuthFastAPI(APIRouter):
 
                 raise_auth_exception({
                     "code": "InternalServerError",
-                    "message": "An internal error occured.",
+                    "message": "An internal error occurred.",
                     "status_code": 500
                 })
-    
+
             return data.get("session", None)
         
         return dependency
@@ -99,17 +99,16 @@ class PyAuthFastAPI(APIRouter):
             if error or not data:
                 raise_auth_exception(error or {
                     "code": "InternalServerError",
-                    "message": "An internal error occured.",
+                    "message": "An internal error occurred.",
                     "status_code": 500
                 })
-
 
             if not isinstance(data, dict):
                 get_logger().error("PyAuth returned invalid session data: expected a dictionary.")
 
                 raise_auth_exception({
                     "code": "InternalServerError",
-                    "message": "An internal error occured.",
+                    "message": "An internal error occurred.",
                     "status_code": 500
                 })
 
@@ -150,3 +149,32 @@ class PyAuthFastAPI(APIRouter):
                 "expires": session.get("expires", None),
             }
             return {"success": True,"message": "Session is active.","session": session_dict}
+
+        @self.post("/rotate-csrf")
+        async def rotate_csrf(
+            response: Response, session=Depends(self.get_current_session())
+        ):
+            """Rotates the CSRF token for the current session.
+
+            Returns a fresh CSRF token and sets it as an updated cookie.
+            """
+            result = await self.auth.rotate_csrf(session_id=session["id"])
+            error = result.get("error", None)
+            data = result.get("data", None)
+
+            if error or not data:
+                raise_auth_exception(error or {
+                    "code": "InternalServerError",
+                    "message": "An internal error occurred.",
+                    "status_code": 500
+                })
+
+            new_csrf_token = data.get("csrf_token", None)
+
+            self._set_auth_cookie(
+                response=response,
+                cookie_config=self.auth.cookies.csrf_token,
+                value=new_csrf_token,
+            )
+
+            return {"success": True, "message": "CSRF token rotated successfully."}
