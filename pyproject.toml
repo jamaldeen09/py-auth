@@ -1,0 +1,23 @@
+# Build config lives in each package's own pyproject.toml under packages/.
+# This root configuration only wires up shared developer tooling
+# (pytest, ruff) for the monorepo.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [
+    "packages/core/src",
+    "packages/adapters/sqlalchemy-adapter/src",
+    "packages/integrations/fastapi-integration/src",
+]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["F", "E9", "B", "UP"]
+ignore = ["B008"]
+
+[tool.coverage.run]
+source = ["py_auth", "py_auth_sqlalchemy", "py_auth_fastapi"]

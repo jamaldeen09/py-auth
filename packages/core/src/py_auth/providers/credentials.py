@@ -1,7 +1,7 @@
 import inspect
 
 from pydantic import BaseModel, ValidationError as PydanticValidationError
-from typing import Any, Awaitable, Callable, Dict, List,  TypedDict, Union, Type
+from typing import Any, Awaitable, Callable, Dict, List, TypedDict, Type, Union
 
 from ..base import BaseProvider
 from ..schemas import AuthResult
@@ -70,13 +70,16 @@ class CredentialsProvider(BaseProvider):
             return get_auth_result(data=result)
         
         except Exception as e:
-            get_logger().exception("todo....")
+            get_logger().exception(
+                "Unexpected error occurred inside the authorization callback.",
+                exc_info=e,
+            )
 
             return get_auth_result(
                 error={
                     "code": "InternalServerError",
                     "status_code": 500,
-                    "message": "An internal error occured."
+                    "message": "An internal error occurred."
                 }
             )
 
