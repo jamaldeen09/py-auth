@@ -1,1 +1,16 @@
-pydantic>=2.0.0,<3.0.0
+annotated-types==0.8.0
+anyio==4.15.1
+Authlib==1.8.0
+cffi==2.1.1
+cryptography==50.0.1
+h11==0.16.0
+httpcore2==2.13.0
+httpx2==2.13.0
+idna==3.20
+joserfc==1.7.5
+pycparser==3.0
+pydantic==2.13.5
+pydantic_core==2.46.5
+truststore==0.10.4
+typing-inspection==0.4.4
+typing_extensions==4.16.0

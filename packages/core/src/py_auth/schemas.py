@@ -50,14 +50,29 @@ class CookieConfig(BaseModel):
 class PyAuthCookiesInput(BaseModel):
     session_token: CookieConfigInput | None = None
     csrf_token: CookieConfigInput | None  = None
+    state: CookieConfigInput | None  = None
+    pkce_code_verifier: CookieConfigInput | None = None
+    nonce: CookieConfigInput | None  = None
 
 class PyAuthCookies(BaseModel):
     session_token: CookieConfig
     csrf_token: CookieConfig
+    state: CookieConfig
+    pkce_code_verifier: CookieConfig
+    nonce: CookieConfig
 
 @runtime_checkable
 class PyAuthAdapterProtocol(Protocol):
     """Defines the strict structural contract that any py-auth adapter must implement."""
+
+    async def create_user(self, user_data: Dict[str, Any]) -> Dict[str, Any] | None:...
+    async def get_user_by_emai(self, email: str) -> Dict[str, Any] | None:...
+    async def get_or_create_user_and_link_account (
+        self, 
+        email: str, 
+        user_data: Dict[str, Any],
+        account_data: Dict[str, Any]
+    ) -> Dict[str, Any] | None:...
 
     async def create_session(self, session_data: Dict[str, Any]) -> Dict[str, Any] | None: ...
     async def get_session_by_session_token_hash(self, session_token_hash: str) -> Dict[str, Any] | None: ...

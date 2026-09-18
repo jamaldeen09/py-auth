@@ -84,7 +84,7 @@ async def handle_db_errors(operation: str):
                 f"Failed to complete operation '{operation}': a record with this unique value already exists."
             ) from e
         raise PyAuthError(
-            f"Database integrity error occurred in operation '{operation}': {e}"
+            f"Database integrity error occurred in operation '{operation}'"
         ) from e
 
     except NoResultFound as e:
@@ -96,5 +96,5 @@ async def handle_db_errors(operation: str):
         raise
     except Exception as e:
         raise PyAuthError(
-            f"An unexpected database error occurred in operation '{operation}': {e}"
+            f"An unexpected database error occurred in operation '{operation}'"
         ) from e

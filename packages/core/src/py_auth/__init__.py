@@ -13,6 +13,7 @@ from .exceptions import (
     RecordNotFoundError,
 )
 from .providers.credentials import CredentialsProvider
+from .providers.google import GoogleProvider
 from .schemas import (
     AdapterContainer,
     AuthError,
@@ -21,6 +22,9 @@ from .schemas import (
     CookieOptions,
     PyAuthAdapterProtocol,
     PyAuthCookiesInput,
+    CookieConfigInput,
+    PyAuthCookies,
+    CookieOptionsInput,
 )
 
 __all__ = [
@@ -40,6 +44,10 @@ __all__ = [
     "PyAuthCookiesInput",
     "PyAuthAdapterProtocol",
     "AdapterContainer",
+    "GoogleProvider",
+    "CookieConfigInput",
+    "PyAuthCookies",
+    "CookieOptionsInput"
 ]
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"

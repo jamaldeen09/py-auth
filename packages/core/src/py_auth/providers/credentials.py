@@ -29,7 +29,7 @@ class CredentialsProvider(BaseProvider):
         self.model = model
         self.authorize = authorize
 
-    async def handle_request(self, request_body: Dict[str, Any]) -> AuthResult:
+    async def authenticate(self, request_body: Dict[str, Any]) -> AuthResult:
         """Validate request data using the Pydantic model and execute the authorization callback."""
         try:
             validated_data = self.model.model_validate(request_body)
@@ -67,10 +67,25 @@ class CredentialsProvider(BaseProvider):
                     }
                 )
             
+            if not isinstance(result, dict):
+                get_logger().error(
+                    "Credentials provider 'authorize' callback returned an invalid result. "
+                    "Expected a dict, got %s.",
+                    type(result).__name__,
+                )
+
+                return get_auth_result(
+                    error={
+                       "code": "InternalServerError",
+                       "status_code": 500,
+                       "message": "An internal error occured."
+                    }
+                )
+
             return get_auth_result(data=result)
         
         except Exception as e:
-            get_logger().exception("todo....")
+            get_logger().exception("Credentials provider authorization callback raised an unexpected exception.")
 
             return get_auth_result(
                 error={

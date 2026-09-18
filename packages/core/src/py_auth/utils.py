@@ -2,7 +2,7 @@ import hashlib, secrets, logging
 
 from typing import Any
 
-from .schemas import PyAuthCookiesInput, AuthError, AuthResult, CookieConfig, CookieOptions, PyAuthCookies
+from .schemas import PyAuthCookiesInput, AuthError, AuthResult, CookieConfig, CookieOptions, PyAuthCookies, CookieConfigInput
 
 def generate_token(num_bytes: int = 32) -> str:
     """Generate a cryptographically secure URL-safe token."""
@@ -53,8 +53,98 @@ _DEFAULTS = PyAuthCookies(
             domain=None,
             max_age=60 * 60,
         ),
+    ), 
+
+    state=CookieConfig(
+        name="__Secure-py_auth.state",
+        options=CookieOptions(
+            http_only=True,
+            secure=True,
+            same_site="lax",
+            path="/",
+            domain=None,
+            expires=None,
+            max_age=900
+        )
     ),
+
+    pkce_code_verifier=CookieConfig(
+        name="__Secure-py_auth.pkce.code_verifier",
+        options=CookieOptions(
+            http_only=True,
+            secure=True,
+            same_site="lax",
+            path="/",
+            domain=None,
+            expires=None,
+            max_age=900
+        )
+    ),
+
+    nonce=CookieConfig(
+        name="__Secure-py_auth.nonce",
+        options=CookieOptions(
+            http_only=True,
+            secure=True,
+            same_site="lax",
+            path="/",
+            domain=None,
+            expires=None,
+            max_age=900
+        )
+    )
 )
+
+def _merge_cookie_config(
+    default: CookieConfig,
+    override: CookieConfigInput | None,
+) -> CookieConfig:
+    """Merge a cookie configuration using the default and optional override."""
+    if override is None:
+        return default
+
+    options = default.options.model_dump()
+
+    if override.options is not None:
+        options.update(
+            override.options.model_dump(exclude_none=True)
+        )
+
+    return CookieConfig(
+        name=(
+            override.name
+            if override.name is not None
+            else default.name
+        ),
+        options=CookieOptions(**options),
+    )
+
+def merge_cookie_config(
+    user_config: PyAuthCookiesInput | None = None,
+) -> PyAuthCookies:
+    """Merge the complete cookie configuration."""
+    return PyAuthCookies(
+        session_token=_merge_cookie_config(
+            _DEFAULTS.session_token,
+            user_config.session_token if user_config else None,
+        ),
+        csrf_token=_merge_cookie_config(
+            _DEFAULTS.csrf_token,
+            user_config.csrf_token if user_config else None,
+        ),
+        state=_merge_cookie_config(
+            _DEFAULTS.state,
+            user_config.state if user_config else None,
+        ),
+        pkce_code_verifier=_merge_cookie_config(
+            _DEFAULTS.pkce_code_verifier,
+            user_config.pkce_code_verifier if user_config else None,
+        ),
+        nonce=_merge_cookie_config(
+            _DEFAULTS.nonce,
+            user_config.nonce if user_config else None,
+        ),
+    )
 
 def merge_cookie_config(
     user_config: PyAuthCookiesInput | None = None,

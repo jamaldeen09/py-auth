@@ -3,6 +3,7 @@ from .utils import handle_db_errors, validate_async_engine, validate_sqlalchemy_
 from typing import Any, Dict, Type
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
+from py_auth.exceptions import AdapterError, RecordNotFoundError
 
 class SqlAlchemyAdapter:
     """SQLAlchemy ORM adapter for py-auth.
@@ -16,6 +17,8 @@ class SqlAlchemyAdapter:
         self,
         engine: AsyncEngine,
         session_model: Type[Any],
+        user_model: Type[Any] | None = None,
+        account_model: Type[Any] | None = None,
     ):
         self.session_model = validate_sqlalchemy_model(
             model=session_model,
@@ -29,6 +32,39 @@ class SqlAlchemyAdapter:
             },
         )
 
+        if user_model:
+            self.user_model = validate_sqlalchemy_model(
+                model=user_model,
+                model_name="User",
+                required_cols={
+                   "id",
+                   "email",
+                   "name",
+                   "image",
+                }
+            )
+
+        if account_model:
+            self.account_model = validate_sqlalchemy_model(
+                model=account_model,
+                model_name="Account",
+                required_cols={
+                    "id",
+                    "user_id",
+                    "type",
+                    "provider",
+                    "provider_account_id",
+                    "access_token",
+                    "refresh_token",
+                    "expires_at",
+                    "token_type",
+                    "scope",
+                    "id_token",
+                    "session_state"
+                }
+            )
+
+
         self.engine = validate_async_engine(engine=engine)
         self.session_maker = async_sessionmaker(
             bind=self.engine, class_=AsyncSession, expire_on_commit=False
@@ -40,6 +76,84 @@ class SqlAlchemyAdapter:
             return None
         cols = [c.name for c in instance.__table__.columns]
         return {name: getattr(instance, name) for name in cols}
+    
+    async def get_or_create_user_and_link_account(
+        self, 
+        email: str, 
+        user_data: Dict[str, Any], 
+        account_data: Dict[str, Any]
+    ) -> Dict[str, Any] | None:
+        
+        if not self.user_model:
+            raise AdapterError(
+                "Attempted to call 'get_or_create_user_and_link_account', "
+                "but 'user_model' is not configured."
+            )
+
+        if not self.account_model:
+            raise AdapterError(
+                "Attempted to call 'get_or_create_user_and_link_account', "
+                "but 'account_model' is not configured."
+            )
+
+        async with handle_db_errors(operation="get_or_create_user_and_link_account"):
+            async with self.session_maker() as session:
+                async with session.begin():
+                    stmt = (select(self.user_model).where(self.user_model.email == email).with_for_update())
+
+                    result = await session.execute(stmt)
+                    user = result.scalars().first()
+
+                    if user is None:
+                        user = self.user_model(**user_data)
+                        session.add(user)
+                        await session.flush()
+
+                    account = self.account_model(user_id=user.id,**account_data)
+                    session.add(account)
+                    await session.flush()
+                    await session.refresh(user)
+
+                return self._row_to_dict(user)
+    
+    
+    async def link_account(self,account_data: Dict[str, Any],) -> Dict[str, Any] | None:
+        """Create and persist a new account record."""
+        if not self.account_model:
+            raise AdapterError(
+              "Attempted to call 'link_account', but 'account_model' is not configured in the adapter."
+            )
+
+        async with handle_db_errors(operation="link_account"):
+            async with self.session_maker() as session:
+                async with session.begin():
+                    account = self.account_model(**account_data)
+                    session.add(account)
+                    await session.flush()
+                    await session.refresh(account)
+                return self._row_to_dict(account)
+            
+    async def unlink_account(self,provider: str, provider_account_id: str) -> None:
+        """Delete an existing account record linked to a provider."""
+
+        if not self.account_model:
+            raise AdapterError(
+                "Attempted to call 'unlink_account', but 'account_model' "
+                "is not configured in the adapter."
+            )
+
+        async with handle_db_errors(operation="unlink_account"):
+            async with self.session_maker() as session:
+                async with session.begin():
+                    stmt = (
+                        delete(self.account_model)
+                        .where(
+                            self.account_model.provider == provider,
+                            self.account_model.provider_account_id == provider_account_id,
+                        )
+                    )
+
+                    await session.execute(stmt)
 
     async def create_session(self, session_data: Dict[str, Any]) -> Dict[str, Any] | None:
         """Create and persist a new session record."""

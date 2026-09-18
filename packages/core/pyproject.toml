@@ -10,10 +10,9 @@ authors = [
 ]
 description = "Core auth primitives and provider framework for py-auth-core."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -26,6 +25,9 @@ license-files = ["LICENSE"]
 
 dependencies = [
     "pydantic>=2.0.0,<3.0.0",
+    "authlib>=1.8.0",
+    "httpx2",
+    "joserfc",
 ]
 
 [project.optional-dependencies]
