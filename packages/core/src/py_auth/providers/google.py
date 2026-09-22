@@ -2,7 +2,7 @@ import httpx2
 
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 from authlib.integrations.base_client import OAuthError
-from typing import Literal, Any, Dict
+from typing import Literal, Any, Dict, List
 from joserfc.jwk import KeySet
 from joserfc.jwt import decode, JWTClaimsRegistry
 from joserfc.errors import (ClaimError,ExpiredTokenError,JoseError)
@@ -10,7 +10,6 @@ from joserfc.errors import (ClaimError,ExpiredTokenError,JoseError)
 from ..base import BaseProvider
 from ..utils import get_logger, get_auth_result, generate_token
 from ..schemas import AuthResult
-from ..exceptions import DuplicateEntryError
 
 class GoogleProvider (BaseProvider):
     """Handle Google OAuth/OIDC authentication and return the authenticated user."""
@@ -28,8 +27,6 @@ class GoogleProvider (BaseProvider):
         self.redirect_uri = redirect_uri
         self.access_type = access_type
         self.prompt = prompt
-
-        self.google_issuer = "https://accounts.google.com"
     
     @staticmethod
     def generate_code_verifier():
@@ -71,7 +68,7 @@ class GoogleProvider (BaseProvider):
                     "message": "Unable to retrieve Google's public keys.",
                 })
             
-            except httpx2.RequestError as e:
+            except httpx2.RequestError:
                 get_logger().exception("Request error while fetching Google JWKS.")
 
                 return get_auth_result(error={
@@ -82,7 +79,7 @@ class GoogleProvider (BaseProvider):
 
             try:
                 jwks = response.json()
-            except ValueError as e:
+            except ValueError:
                 get_logger().exception("Google returned invalid JWKS JSON.")
 
                 return get_auth_result(error={
@@ -104,7 +101,7 @@ class GoogleProvider (BaseProvider):
                     "message": "Google returned an invalid public-key response.",
                 })
             
-            return get_auth_result(data=jwks["keys"])
+            return get_auth_result(data={"keys":jwks["keys"]})
         
     def get_client (self, options: Dict[str, Any] | None = None):
         return AsyncOAuth2Client(
@@ -196,50 +193,44 @@ class GoogleProvider (BaseProvider):
         adapter: Any
     ) -> AuthResult:
         
-        callback_result = await self.handle_callback(
+        callback_result: AuthResult = await self.handle_callback(
             request_url=request_url,
             state=state,
             code_verifier=code_verifier,
         )
         
-        error = callback_result["error"]
-
-        if error:
+        if callback_result.get("error"):
             return callback_result
+        
+        callback_result_data: Dict[str, Any] = callback_result.get("data") or {}
+        id_token: str | None = callback_result_data["id_token"]
 
-        id_token = callback_result["data"]["id_token"]
-
-        fetch_result = await GoogleProvider.fetch_google_public_keys()
-        if fetch_result["error"]:
+        fetch_result: AuthResult = await GoogleProvider.fetch_google_public_keys()
+        if fetch_result.get("error"):
             return fetch_result
         
-        keys = fetch_result["data"]
-        validation_result = self.validate_id_token(id_token, jwks={"keys":keys}, nonce=nonce)
-        if validation_result["error"]:
+        fetch_result_data: Dict[str, Any] = fetch_result.get("data") or {}
+        keys: List[Dict[str, Any]] = fetch_result_data.get("keys") or []
+
+        validation_result: AuthResult = self.validate_id_token((id_token or ""), jwks={"keys":keys}, nonce=nonce)
+        if validation_result.get("error"):
             return validation_result
         
-        claims = validation_result["data"]
-        provider_acc_id = claims["sub"]
-        user_email = claims["email"]
-        name = claims.get("name", None)
-        image = claims.get("picture", None)
-        try:
-            user_data = {"email":user_email,"name":name,"image":image}
-            account_data = {"provider":"google","provider_account_id":provider_acc_id,**callback_result}
+        claims: Dict[str, Any] = validation_result.get("data") or {}
 
-            user_dict = await adapter.get_or_create_user_and_link_account(user_email,user_data,account_data)
+        provider_acc_id: str = claims["sub"]
+        user_email: str = claims["email"]
+        name: str | None = claims.get("name", None)
+        image: str | None = claims.get("picture", None)
+
+        try:
+            user_data = {"email":user_email.lower(),"name":name,"image":image}
+            account_data = {"provider":"google","provider_account_id":provider_acc_id,**callback_result_data}
+            result= await adapter.get_or_create_user_and_link_account(user_email,user_data,account_data)
+            user_dict = result["user"]
             return get_auth_result(data=user_dict)
         
-        except DuplicateEntryError as e:
-            get_logger().warning("Google account is already linked: %s", e)
-            
-            return get_auth_result(error={
-                "code": "AccountAlreadyLinked",
-                "status_code": 409,
-                "message": "This Google account is already linked.",
-            })
-        
-        except Exception as e:
+        except Exception:
             get_logger().exception("Unexpected error while creating or linking Google account.")
             
             return get_auth_result(error={

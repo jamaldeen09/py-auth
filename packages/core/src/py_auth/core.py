@@ -1,4 +1,4 @@
-import hmac
+
 
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
@@ -15,63 +15,6 @@ from .schemas import (
     PyAuthCookiesInput,
 )
 
-# @app.get("/google")
-# def google():
-#     code_verifier = google_provider.generate_code_verifier()
-#     nonce = google_provider.generate_nonce()
-#     client = google_provider.get_client()
-
-#     authorization_url, state = google_provider.create_auth_url(
-#         code_verifier=code_verifier,
-#         nonce=nonce,
-#         client=client,
-#     )
-
-#     print("AUTHORIZATION URL:")
-#     print(authorization_url)
-
-#     response = RedirectResponse(authorization_url)
-
-#     response.set_cookie(
-#         key="state",
-#         value=state,
-#     )
-
-#     response.set_cookie(
-#         key="code_verifier",
-#         value=code_verifier,
-#     )
-
-#     response.set_cookie(
-#         key="nonce",
-#         value=nonce,
-#     )
-
-
-#     print("state being stored in cookie:", state)
-#     print("code_verifier being stored in cookie:", code_verifier)
-#     print("nonce being stored in cookie:", nonce)
-#     return response
-
-
-# @app.get("/api/v1/auth/google/callback")
-# async def callback(request: Request):
-#     state = request.cookies.get("state")
-#     code_verifier = request.cookies.get("code_verifier")
-
-#     print("state extracted from cookie:", state)
-#     print("code_verifier extracted from cookie:", code_verifier)
-
-#     result = await google_provider.authenticate(
-#         request_url=str(request.url),
-#         state=state,
-#         code_verifier=code_verifier,
-#         nonce="THIS_IS_THE_WRONG_NONCE",
-#         adapter="",
-#     )
-
-#     return result
-
 class PyAuth:
     """Core py-auth authentication manager."""
 
@@ -87,13 +30,11 @@ class PyAuth:
         self._provider_map = {getattr(p, "id", None): p for p in (providers or [])}
         self.cookies = merge_cookie_config(user_config=cookies)
     
-    async def create_session(self, user_data: Dict[str, Any], provider: str | None = None) -> AuthResult:
-        expires = datetime.now(timezone.utc) + timedelta(days=30)
-        session_token = generate_token(num_bytes=48)
-        csrf_token = generate_token(num_bytes=32)
-
+    async def handle_create_session (self, user_data: Dict[str, Any], provider: str) -> AuthResult:
         max_retries = 3
         created_session = None
+        expires = datetime.now(timezone.utc) + timedelta(days=30)
+        session_token = generate_token(num_bytes=48)
 
         for _ in range(max_retries):
             session_token_hash = hash_token(session_token)
@@ -117,9 +58,9 @@ class PyAuth:
                 created_session = await self.adapter.create_session({
                     "session_token_hash": session_token_hash,
                     "user_id": user_id,
-                    "csrf_token": csrf_token,
                     "expires": expires,
                 })
+
                 break
 
             except DuplicateEntryError:
@@ -157,7 +98,7 @@ class PyAuth:
                         "message": "An internal error occurred.",
                     }
                 )
-
+            
         if not created_session:
             return get_auth_result(
                 error={
@@ -166,33 +107,20 @@ class PyAuth:
                     "message": "Failed to create session. Please try again.",
                 }
             )
-
-        return get_auth_result(
-            data={
-                "session_token": session_token,
-                "csrf_token": csrf_token,
-                "expires": expires,
-                "session": created_session,
-            }
-        )
-
-    async def verify_session(self, session_token: str, csrf_token: str) -> AuthResult:
-        """Verify an active session and ensure CSRF token validity."""
+        
+        return get_auth_result(data={
+            "session_token": session_token,
+            "expires": created_session["expires"]
+        })
+    
+    async def verify_session(self, session_token: str) -> AuthResult:
+        """Verify an active session."""
         if not session_token:
             return get_auth_result(
                 error={
                     "code": "MissingSessionToken",
                     "status_code": 401,
                     "message": "Session token was not provided.",
-                }
-            )
-
-        if not csrf_token:
-            return get_auth_result(
-                error={
-                    "code": "MissingCsrfToken",
-                    "status_code": 401,
-                    "message": "CSRF token was not provided.",
                 }
             )
         
@@ -248,32 +176,6 @@ class PyAuth:
                     }
                 )
             
-            db_csrf_token: str | None = session.get("csrf_token", None)
-
-            if not isinstance(db_csrf_token, str):
-                get_logger().error(
-                    "Invalid session data returned by the configured adapter: "
-                    "'csrf_token' must be a valid string."
-                )
-
-                return get_auth_result(
-                    error={
-                        "code": "InternalServerError",
-                        "status_code": 500,
-                        "message": "An internal error occured."
-                    }
-                )
-            
-            compare_result = hmac.compare_digest(db_csrf_token, csrf_token)
-            if not compare_result:
-                return get_auth_result(
-                    error={
-                        "code": "InvalidCsrfToken",
-                        "status_code": 403,
-                        "message": "CSRF token validation failed."
-                    }
-                )
-            
             return get_auth_result(data={"session":session})
             
         except Exception:
@@ -289,12 +191,13 @@ class PyAuth:
 
     async def signout(self, session_id: str) -> AuthResult:
         """Invalidate and delete the session identified by session_id with error handling."""
+
         try:
             await self.adapter.delete_session(session_id)
             return get_auth_result(data={"signed_out":True})
         except RecordNotFoundError:
             return get_auth_result(data={"signed_out":True})
-        except Exception as e:
+        except Exception:
             get_logger().exception("Unexpected error during signout.")
             return get_auth_result(
                 error={
@@ -304,7 +207,7 @@ class PyAuth:
                 }
             )
         
-    async def signin_with_google (self, 
+    async def handle_google_callback (self, 
         request_url: str,
         state: str, 
         code_verifier: str, 
@@ -314,7 +217,7 @@ class PyAuth:
         google_provider = self._provider_map.get("google")
 
         if not google_provider:
-            get_logger().error("Attempted to call 'signin_with_google' but 'GoogleProvider' is not configured.")
+            get_logger().error("Attempted to call 'handle_google_callback' but 'GoogleProvider' is not configured.")
 
             return get_auth_result(
                 error={
@@ -332,11 +235,33 @@ class PyAuth:
             self.adapter,
         )
 
-        if result["error"]:
+        if result.get("error"):
             return result
         
-        return await self.create_session(user_data=result["data"], provider="GoogleProvider")
+        user_data: Dict[str, Any] = result.get("data") or {}
+        return await self.handle_create_session(user_data=user_data, provider="GoogleProvider")
     
+    def verify_csrf_double_submit (self, cookie_csrf_token: str, submitted_csrf_token: str) -> AuthResult:
+        if not cookie_csrf_token:
+            return get_auth_result(
+                error={
+                    "code": "MissingCsrfToken",
+                    "status_code": 401,
+                    "message": "CSRF token was not provided.",
+                }
+            )
+        
+        if submitted_csrf_token != cookie_csrf_token:
+            return get_auth_result(
+                error={
+                    "code": "InvalidCsrfToken",
+                    "status_code": 403,
+                    "message": "The provided CSRF token is invalid."
+                }
+            )
+        
+        return get_auth_result(data={"validated":True})        
+
     async def signin_with_credentials(self, request_body: Dict[str, Any]) -> AuthResult:
         """Authenticate user credentials, create a session, and return session tokens."""
         credentials_provider = self._provider_map.get("credentials")
@@ -351,10 +276,11 @@ class PyAuth:
                     "message": "An internal error occurred."
                 }
             )
-
+        
         result: AuthResult = await credentials_provider.authenticate(request_body)
 
-        if result["error"]:
+        if result.get("error"):
             return result
-    
-        return await self.create_session(user_data=result["data"], provider="CredentialsProvider")
+        
+        user_data: Dict[str, Any]= result.get("data") or {}
+        return await self.handle_create_session(user_data=user_data, provider="CredentialsProvider")

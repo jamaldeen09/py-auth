@@ -8,10 +8,12 @@ from py_auth.exceptions import (
     PyAuthError,
     RecordNotFoundError,
 )
-from sqlalchemy import inspect
+from sqlalchemy import inspect, DateTime
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncEngine
-
+from datetime import datetime, timezone
+from sqlalchemy.dialects.mysql import DATETIME
+from sqlalchemy.types import TypeDecorator
 
 def validate_async_engine(engine: object) -> AsyncEngine:
     """Validate that the engine is an asynchronous SQLAlchemy AsyncEngine
@@ -23,7 +25,6 @@ def validate_async_engine(engine: object) -> AsyncEngine:
             "'AsyncEngine' (created via create_async_engine)."
         )
 
-    # Inspect the driver prefix from the engine's URL object
     supported_drivers = ("asyncpg", "aiomysql", "aiosqlite")
     driver = engine.url.get_driver_name()
 
@@ -37,7 +38,7 @@ def validate_async_engine(engine: object) -> AsyncEngine:
 
 def validate_sqlalchemy_model(
     model: type[Any],
-    required_cols: set[str],
+    required_columns: set[str],
     model_name: str | None = None,
 ) -> type[Any]:
     """Validate that the provided class is a valid SQLAlchemy declarative model
@@ -51,20 +52,96 @@ def validate_sqlalchemy_model(
 
     try:
         mapper = inspect(model)
-        col_names = {c.key for c in mapper.columns}
+        column_names = {c.key for c in mapper.columns}
     except Exception as e:
         raise AdapterError(
             f"Provided '{display_name}' must be a valid SQLAlchemy model class: {e}"
         )
 
-    if not required_cols.issubset(col_names):
-        missing = sorted(required_cols - col_names)
+    if not required_columns.issubset(column_names):
+        missing = sorted(required_columns - column_names)
         raise AdapterError(
             f"Custom {display_name} model is missing required py-auth columns: {missing}. "
             "Extra custom columns are allowed, but these base columns are mandatory."
         )
     return model
 
+
+class UTCDateTime(TypeDecorator):
+    """
+    SQLAlchemy datetime type that provides consistent UTC-aware datetimes
+    across supported database backends.
+
+    Python-side behavior:
+        Values are always expected to be timezone-aware and are normalized
+        to UTC before being stored.
+
+    PostgreSQL:
+        Uses a timezone-aware timestamp and preserves the UTC timezone.
+
+    MySQL:
+        MySQL DATETIME does not preserve timezone information. Values are
+        therefore converted to UTC and stored as naive UTC datetimes.
+        When read back, the UTC timezone is restored.
+
+    SQLite:
+        SQLite does not have a native timezone-aware datetime type. Values
+        are therefore handled like MySQL: stored as naive UTC datetimes and
+        returned to Python as timezone-aware UTC datetimes.
+
+    This allows the rest of py-auth to consistently work with timezone-aware
+    UTC datetimes without needing database-specific datetime handling.
+    """
+
+    impl = DateTime
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == "mysql":
+            return dialect.type_descriptor(
+                DATETIME(fsp=6)
+            )
+        
+        if dialect.name == "sqlite":
+            return dialect.type_descriptor(
+                DateTime()
+            )
+
+        return dialect.type_descriptor(
+            DateTime(timezone=True)
+        )
+
+    def process_bind_param(
+        self,
+        value: datetime | None,
+        dialect,
+    ):
+        if value is None:
+            return None
+
+        if value.tzinfo is None:
+            raise ValueError("UTCDateTime requires a timezone-aware datetime")
+
+        value = value.astimezone(timezone.utc)
+
+        if dialect.name in ("mysql", "sqlite"):
+            return value.replace(tzinfo=None)
+
+        return value
+
+    def process_result_value(
+        self,
+        value: datetime | None,
+        dialect,
+    ):
+        if value is None:
+            return None
+
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+
+        return value.astimezone(timezone.utc)
+    
 
 @asynccontextmanager
 async def handle_db_errors(operation: str):

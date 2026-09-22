@@ -1,3 +1,5 @@
+import logging
+
 from py_auth.schemas import AuthError
 from fastapi.exceptions import HTTPException
 from typing import NoReturn
@@ -17,3 +19,13 @@ def raise_auth_exception(error: AuthError) -> NoReturn:
             "error": {"status_code": status_code, "code": code, "details": details},
         },
     )
+
+
+def get_logger():
+    """Retrieve the centralized namespaced logger for the py-auth library.
+
+    Using a dedicated namespace ('py_auth') allows consuming applications
+    to configure logging levels, formats, or handlers specifically for this
+    package without polluting or altering the main application's logs.
+    """
+    return logging.getLogger("py_auth.fastapi")
