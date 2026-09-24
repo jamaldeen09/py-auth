@@ -35,8 +35,6 @@ MarkupSafe==3.0.3
 mdurl==0.1.2
 packaging==26.3
 pluggy==1.6.0
-py-auth-core @ file:///Users/macbook/open-source-tools/py-auth/packages/core
-py-auth-sqlalchemy @ file:///Users/macbook/open-source-tools/py-auth-fresh/packages/adapters/sqlalchemy_adapter
 pycparser==3.0
 pydantic==2.13.5
 pydantic-extra-types==2.11.1

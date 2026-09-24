@@ -15,6 +15,3 @@ class BaseProvider(ABC):
     @abstractmethod
     async def authenticate(self, *args: Any, **kwargs: Any) -> AuthResult:
         pass
-
-
-__all__ = ["BaseProvider"]

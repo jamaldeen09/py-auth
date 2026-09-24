@@ -2,7 +2,7 @@
 py-auth-core: Modular authentication primitives and provider framework for Python backends.
 """
 
-from .base import BaseProvider
+from ._base import BaseProvider
 from .core import PyAuth
 from .exceptions import (
     AdapterError,

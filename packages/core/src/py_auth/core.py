@@ -8,7 +8,7 @@ from .exceptions import (
     ForeignKeyViolationError,
     RecordNotFoundError,
 )
-from .utils import generate_token, hash_token, merge_cookie_config, get_logger, get_auth_result
+from ._utils import generate_session_token, hash_token, get_logger, get_auth_result, merge_cookie_config
 from .schemas import (
     AdapterContainer,
     AuthResult,
@@ -34,7 +34,7 @@ class PyAuth:
         max_retries = 3
         created_session = None
         expires = datetime.now(timezone.utc) + timedelta(days=30)
-        session_token = generate_token(num_bytes=48)
+        session_token = generate_session_token(num_bytes=48)
 
         for _ in range(max_retries):
             session_token_hash = hash_token(session_token)
@@ -69,7 +69,7 @@ class PyAuth:
                     "retrying with a new session token."
                 )
 
-                session_token = generate_token(num_bytes=48)
+                session_token = generate_session_token(num_bytes=48)
 
             except ForeignKeyViolationError as e:
                 get_logger().exception(

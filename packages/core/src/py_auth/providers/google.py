@@ -7,8 +7,8 @@ from joserfc.jwk import KeySet
 from joserfc.jwt import decode, JWTClaimsRegistry
 from joserfc.errors import (ClaimError,ExpiredTokenError,JoseError)
 
-from ..base import BaseProvider
-from ..utils import get_logger, get_auth_result, generate_token
+from .._base import BaseProvider
+from .._utils import get_logger, get_auth_result, generate_token
 from ..schemas import AuthResult
 
 class GoogleProvider (BaseProvider):
@@ -27,14 +27,7 @@ class GoogleProvider (BaseProvider):
         self.redirect_uri = redirect_uri
         self.access_type = access_type
         self.prompt = prompt
-    
-    @staticmethod
-    def generate_code_verifier():
-        return generate_token(64)
-    
-    @staticmethod
-    def generate_nonce():
-        return generate_token()
+        self.google_issuer = "https://accounts.google.com"
     
     @staticmethod
     async def fetch_google_public_keys() -> AuthResult:
@@ -297,5 +290,3 @@ class GoogleProvider (BaseProvider):
                     "message": "An internal error occurred."
                 }
             )
-
-__all__ = ["GoogleProvider"]

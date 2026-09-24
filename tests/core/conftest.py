@@ -3,7 +3,8 @@ import pytest
 
 from unittest.mock import AsyncMock
 from py_auth import PyAuth
-from pydantic import BaseModel
+from .helpers import LoginSchema
+from py_auth.providers import GoogleProvider, CredentialsProvider
 
 @pytest.fixture
 def mock_adapter():
@@ -39,7 +40,18 @@ def auth(mock_adapter):
     """
     return PyAuth(adapter=mock_adapter)
 
-class LoginSchema(BaseModel):
-    """Minimal login schema — just what I need to test credentials validation."""
-    email: str
-    password: str
+
+@pytest.fixture
+def google_provider():
+    return GoogleProvider(
+        client_id="test-client-id",
+        client_secret="test-client-secret",
+        redirect_uri="https://example.com/callback",
+    )
+
+@pytest.fixture
+def get_credentials_provider ():
+    def credentials_provider (authorize):
+        return CredentialsProvider(model=LoginSchema, authorize=authorize)
+    
+    return credentials_provider

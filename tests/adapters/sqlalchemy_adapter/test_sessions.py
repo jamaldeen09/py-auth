@@ -104,8 +104,6 @@ async def test_update_session_expires(user_data, session_data, adapter):
     new_expires = datetime.now(timezone.utc) + timedelta(days=30)
     updated = await adapter.update_session(created_session["id"], {"expires": new_expires})
 
-    print("UPDATED:", updated)
-    print("NEW EXPIRES:", new_expires)
     assert updated is not None
     assert updated["expires"] == new_expires
 

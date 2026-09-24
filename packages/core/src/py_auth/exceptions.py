@@ -1,7 +1,3 @@
-"""
-Core exception classes for py-auth.
-"""
-
 class PyAuthError(Exception):
     """Base exception for all py-auth errors."""
 
@@ -42,12 +38,3 @@ class ConfigurationError(PyAuthError):
 
     status_code: int = 500
 
-
-__all__ = [
-    "PyAuthError",
-    "DuplicateEntryError",
-    "ForeignKeyViolationError",
-    "RecordNotFoundError",
-    "AdapterError",
-    "ConfigurationError",
-]

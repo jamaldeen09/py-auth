@@ -1,7 +1,7 @@
 import pytest
 
 from datetime import datetime, timezone, timedelta
-from py_auth.utils import hash_token
+from py_auth._utils import hash_token
 
 
 @pytest.mark.asyncio

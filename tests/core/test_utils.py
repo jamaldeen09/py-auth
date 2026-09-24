@@ -1,5 +1,5 @@
 
-from py_auth.utils import generate_token, hash_token, merge_cookie_config
+from py_auth._utils import generate_token, hash_token, merge_cookie_config
 from py_auth.schemas import PyAuthCookiesInput, CookieConfigInput, CookieOptionsInput
 
 
