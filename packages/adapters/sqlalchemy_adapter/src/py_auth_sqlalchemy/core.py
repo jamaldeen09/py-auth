@@ -1,4 +1,4 @@
-from .utils import handle_db_errors, validate_async_engine, validate_sqlalchemy_model
+from ._utils import handle_db_errors, validate_async_engine, validate_sqlalchemy_model
 
 from typing import Any, Dict, Type, List
 from sqlalchemy import delete, select, and_
@@ -6,11 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from py_auth.exceptions import AdapterError
 
 class SqlAlchemyAdapter:
-    """SQLAlchemy ORM adapter for py-auth.
-
-    Provides asynchronous session persistence using SQLAlchemy 2.0.
-    User lookup and creation is handled entirely within the authorize()
-    callback of your CredentialsProvider.
+    """
     """
 
     def __init__(

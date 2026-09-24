@@ -161,7 +161,7 @@ class PyAuth:
                     error={
                         "code": "InternalServerError",
                         "status_code": 500,
-                        "message": "An internal error occured."
+                        "message": "An internal error occurred."
                     }
                 )
             
@@ -185,7 +185,7 @@ class PyAuth:
                 error={
                     "code": "InternalServerError",
                     "status_code": 500,
-                    "message": "An internal error occured.",
+                    "message": "An internal error occurred.",
                 }
             )
 

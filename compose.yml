@@ -2,6 +2,9 @@ name: "py-auth"
 
 services:
 
+  # These databases are used exclusively for the test suite.
+  # Test data is created and cleaned up by pytest fixtures, so
+  # persistent volumes are unnecessary.
   postgres:
     image: postgres:latest
 

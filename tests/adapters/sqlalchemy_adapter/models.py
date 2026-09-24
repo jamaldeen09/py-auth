@@ -3,7 +3,7 @@ from uuid import uuid4
 from datetime import datetime
 from sqlalchemy import ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from py_auth_sqlalchemy.utils import UTCDateTime
+from py_auth_sqlalchemy.utc_datetime import UTCDateTime
 
 class Base(DeclarativeBase): 
     pass

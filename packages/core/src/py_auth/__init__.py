@@ -1,5 +1,5 @@
 """
-py-auth: Modular authentication primitives and provider framework for Python backends.
+py-auth-core: Modular authentication primitives and provider framework for Python backends.
 """
 
 from .base import BaseProvider
