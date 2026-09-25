@@ -25,7 +25,6 @@ license-files = ["LICENSE"]
 
 dependencies = [
     "fastapi[standard]>=0.100.0",
-    "py-auth-core>=0.0.1",
 ]
 
 [project.urls]

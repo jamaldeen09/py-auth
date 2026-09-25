@@ -1,3 +1,5 @@
+
+
 from enum import Enum
 from typing import Any, List, Union, Dict
 from fastapi import APIRouter, Request, Response, Depends
@@ -5,7 +7,8 @@ from fastapi.responses import RedirectResponse
 from py_auth import PyAuth
 from py_auth.schemas import CookieConfig
 from py_auth.providers import GoogleProvider
-from py_auth.utils import generate_token
+from py_auth._utils import generate_csrf_token, generate_code_verifier, generate_nonce
+
 from .utils import raise_auth_exception, get_logger
 
 class PyAuthFastAPI(APIRouter):
@@ -78,7 +81,7 @@ class PyAuthFastAPI(APIRouter):
             
             result = await self.auth.verify_session(session_token)
             error = result.get("error", None)
-            data = result.get("data", None)
+            data = result.get("data", None)    
 
             if error or not data:
                 raise_auth_exception(error or {
@@ -107,7 +110,7 @@ class PyAuthFastAPI(APIRouter):
             csrf_token = request.cookies.get(csrf_cookie_config.name)
 
             if not csrf_token:
-                csrf_token = generate_token(num_bytes=32)
+                csrf_token = generate_csrf_token()
                 self._set_auth_cookie(
                    response=response, 
                    cookie_config=csrf_cookie_config,
@@ -175,8 +178,8 @@ class PyAuthFastAPI(APIRouter):
                 })
 
             
-            code_verifier = GoogleProvider.generate_code_verifier()
-            nonce = GoogleProvider.generate_nonce()
+            code_verifier = generate_code_verifier()
+            nonce = generate_nonce()
             client = google_provider.get_client()
 
             authorization_url, state = google_provider.create_auth_url(

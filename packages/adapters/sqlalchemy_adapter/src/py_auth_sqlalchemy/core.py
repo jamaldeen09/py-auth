@@ -7,6 +7,15 @@ from py_auth.exceptions import AdapterError
 
 class SqlAlchemyAdapter:
     """
+    SQLAlchemy adapter implementation for py-auth database operations.
+
+    This adapter provides database persistence for py-auth authentication using SQLAlchemy async models.
+    It implements the PyAuthAdapterProtocol interface to handle user, account, and session management
+    through SQLAlchemy ORM with async support.
+
+    The adapter requires a session_model for session management, with optional user_model and account_model
+    for user account and OAuth account linking. All models are validated to ensure they contain the required
+    columns for py-auth operations.
     """
 
     def __init__(
@@ -72,10 +81,10 @@ class SqlAlchemyAdapter:
             return None
         cols = [c.name for c in instance.__table__.columns]
         return {name: getattr(instance, name) for name in cols}
-    
-    # ======================================================
-    # USER METHODS
-    # ======================================================            
+
+
+
+
     async def create_user(self, user_data: dict) -> Dict[str, Any] | None:
         if not self.user_model:
             raise AdapterError(
@@ -163,9 +172,9 @@ class SqlAlchemyAdapter:
 
         # 
     
-    # ======================================================
-    # ACCOUNT METHODS
-    # ======================================================
+
+
+
     async def list_accounts_for_user(self, user_id: str) -> List[(Dict[str, Any] | None)]:
         if not self.account_model:
             raise AdapterError(
@@ -213,9 +222,9 @@ class SqlAlchemyAdapter:
                 )
                 await session.execute(stmt)
 
-    # ======================================================
-    # SESSION METHODS
-    # ======================================================
+
+
+
     async def create_session(self, session_data: Dict[str, Any]) -> Dict[str, Any] | None:
         """Create and persist a new session record."""
         async with handle_db_errors(operation="create_session"):
@@ -293,9 +302,9 @@ class SqlAlchemyAdapter:
                     )
                     await session.execute(stmt)
 
-    # ======================================================
-    # AUTH METHODS
-    # ======================================================
+
+
+
     async def get_or_create_user_and_link_account(self, email: str, user_data: Dict[str, Any], account_data: Dict[str, Any]) -> Dict[str, Any] | None:
         if not self.user_model:
             raise AdapterError(

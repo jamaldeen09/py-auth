@@ -114,3 +114,12 @@ def generate_session_token () -> str:
     authentication status.
     """
     return generate_token(num_bytes=48)
+
+def generate_csrf_token () -> str:
+    """Generate a cryptographically secure CSRF token for Cross-Site Request Forgery protection.
+
+    CSRF tokens are used to prevent CSRF attacks by implementing the double-submit pattern.
+    The token is stored in a cookie and included in form submissions or request headers,
+    allowing the server to verify that requests originate from the legitimate application.
+    """
+    return generate_token(num_bytes=32)
