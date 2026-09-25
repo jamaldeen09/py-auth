@@ -2,41 +2,49 @@ name: "py-auth"
 
 services:
 
+  # Your FastAPI Application
+  fastapi-app:
+    build: ./examples/fastapi_app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      app-postgres:
+        condition: service_healthy
+
+  # This database is used exclusively by sample/demo applications.
+  app-postgres:
+    image: postgres:16
+    ports: 
+      - "${APP_POSTGRES_PORT:-5432}:5432"
+    environment:
+      - POSTGRES_PASSWORD=${APP_POSTGRES_PASSWORD}
+    volumes:
+      - app_postgres_data:/var/lib/postgresql/data
+
+    # Healthcheck so the 'fastapi-app' service knows exactly when the DB is ready to accept connections
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   # These databases are used exclusively for the test suite.
-  # Test data is created and cleaned up by pytest fixtures, so
-  # persistent volumes are unnecessary.
   test-postgres:
     image: postgres:16
-
     ports:
       - "${TEST_POSTGRES_PORT:-5433}:5432"
-
     environment:
       - POSTGRES_PASSWORD=${TEST_POSTGRES_PASSWORD}
 
   test-mysql:
     image: mysql:latest
-
     ports:
       - "${TEST_MYSQL_PORT:-3307}:3306"
-
     environment:
       - MYSQL_ROOT_PASSWORD=${TEST_MYSQL_ROOT_PASSWORD}
       - MYSQL_DATABASE=${TEST_MYSQL_DATABASE}
-
-  # This database is used exclusively by sample/demo applications.
-  # Data persists across container restarts via a named Docker volume.
-  app-postgres:
-    image: postgres:16
-
-    ports: 
-      - "${APP_POSTGRES_PORT:-5432}:5432"
-
-    environment:
-      - POSTGRES_PASSWORD=${APP_POSTGRES_PASSWORD}
-
-    volumes:
-      - app_postgres_data:/var/lib/postgresql/data
 
 volumes:
   app_postgres_data:

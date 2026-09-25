@@ -1,3 +1,18 @@
+# Environments and Secrets
 .env
+.env.*
+.venv
+env/
+venv/
+
+# Python caching
+**/__pycache__/
 *.pyc
-__pycache__
+*.pyo
+*.pyd
+
+# Testing and IDEs
+.pytest_cache/
+.git/
+.vscode/
+.idea/
