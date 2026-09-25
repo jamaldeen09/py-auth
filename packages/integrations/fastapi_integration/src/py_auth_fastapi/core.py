@@ -6,7 +6,6 @@ from fastapi import APIRouter, Request, Response, Depends
 from fastapi.responses import RedirectResponse
 from py_auth import PyAuth
 from py_auth.schemas import CookieConfig
-from py_auth.providers import GoogleProvider
 from py_auth._utils import generate_csrf_token, generate_code_verifier, generate_nonce
 
 from .utils import raise_auth_exception, get_logger

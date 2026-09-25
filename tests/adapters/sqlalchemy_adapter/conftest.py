@@ -1,20 +1,22 @@
-import pytest_asyncio
+import pytest_asyncio, os
 
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import event
 from py_auth_sqlalchemy import SqlAlchemyAdapter
-from tests.config import config
+from dotenv import load_dotenv, find_dotenv
 
 from .models import Base, Session, User, Account
+load_dotenv(find_dotenv())
 
 @pytest_asyncio.fixture(scope="session")
 async def engine():
+    database_url = os.getenv("TEST_DATABASE_URL")
     engine = create_async_engine(
-        config.database_url,
+        database_url,
         echo=True,
     )
 
-    if config.database_url.startswith("sqlite"):
+    if database_url.startswith("sqlite"):
 
         @event.listens_for(engine.sync_engine, "connect")
         def set_sqlite_pragma(dbapi_connection, connection_record):
@@ -39,7 +41,7 @@ async def clean_database(engine):
     async with engine.begin() as conn:
         for table in reversed(Base.metadata.sorted_tables):
             await conn.execute(table.delete())
-            
+
 @pytest_asyncio.fixture
 async def adapter(engine):
     return SqlAlchemyAdapter(

@@ -5,21 +5,38 @@ services:
   # These databases are used exclusively for the test suite.
   # Test data is created and cleaned up by pytest fixtures, so
   # persistent volumes are unnecessary.
-  postgres:
-    image: postgres:latest
+  test-postgres:
+    image: postgres:16
 
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${TEST_POSTGRES_PORT:-5433}:5432"
 
     environment:
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_PASSWORD=${TEST_POSTGRES_PASSWORD}
 
-  mysql:
+  test-mysql:
     image: mysql:latest
 
     ports:
-      - "${MYSQL_PORT:-3306}:3306"
+      - "${TEST_MYSQL_PORT:-3307}:3306"
 
     environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_ROOT_PASSWORD=${TEST_MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${TEST_MYSQL_DATABASE}
+
+  # This database is used exclusively by sample/demo applications.
+  # Data persists across container restarts via a named Docker volume.
+  app-postgres:
+    image: postgres:16
+
+    ports: 
+      - "${APP_POSTGRES_PORT:-5432}:5432"
+
+    environment:
+      - POSTGRES_PASSWORD=${APP_POSTGRES_PASSWORD}
+
+    volumes:
+      - app_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  app_postgres_data:
