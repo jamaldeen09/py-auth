@@ -36,6 +36,9 @@ MarkupSafe==3.0.3
 mdurl==0.1.2
 packaging==26.3
 pluggy==1.6.0
+py-auth-core==0.0.4
+py-auth-fastapi==0.0.2
+py-auth-sqlalchemy==0.0.3
 pycparser==3.0
 pydantic==2.13.5
 pydantic-extra-types==2.11.1

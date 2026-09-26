@@ -1,3 +1,5 @@
+"""Utility functions for engine validation, model validation, and database error handling."""
+
 from contextlib import asynccontextmanager
 from typing import Any
 

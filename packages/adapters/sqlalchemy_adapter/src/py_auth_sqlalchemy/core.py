@@ -1,3 +1,5 @@
+"""SQLAlchemy adapter implementation for py-auth database operations."""
+
 from ._utils import handle_db_errors, validate_async_engine, validate_sqlalchemy_model
 
 from typing import Any, Dict, Type, List
@@ -6,17 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from py_auth.exceptions import AdapterError, DuplicateEntryError
 
 class SqlAlchemyAdapter:
-    """
-    SQLAlchemy adapter implementation for py-auth database operations.
-
-    This adapter provides database persistence for py-auth authentication using SQLAlchemy async models.
-    It implements the PyAuthAdapterProtocol interface to handle user, account, and session management
-    through SQLAlchemy ORM with async support.
-
-    The adapter requires a session_model for session management, with optional user_model and account_model
-    for user account and OAuth account linking. All models are validated to ensure they contain the required
-    columns for py-auth operations.
-    """
+    """SQLAlchemy adapter implementation for py-auth database operations with async support."""
 
     def __init__(
         self,

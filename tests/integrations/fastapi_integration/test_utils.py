@@ -1,7 +1,7 @@
 import pytest
 
 from fastapi.exceptions import HTTPException
-from py_auth_fastapi.utils import raise_auth_exception, get_logger
+from py_auth_fastapi._utils import raise_auth_exception, get_logger
 
 
 def test_raise_auth_exception_with_full_error():

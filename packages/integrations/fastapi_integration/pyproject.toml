@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "py-auth-fastapi"
-version = "0.0.1"
+version = "0.0.2"
 authors = [
   { name = "Olatunji Jamaldeen Omotoyosi", email = "jamaldeen.o@yahoo.com" },
 ]
@@ -25,6 +25,7 @@ license-files = ["LICENSE"]
 
 dependencies = [
     "fastapi[standard]>=0.100.0",
+    "py-auth-core>=0.0.3"
 ]
 
 [project.urls]

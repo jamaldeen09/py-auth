@@ -1,3 +1,4 @@
+"""FastAPI integration for py-auth-core"""
 
 
 from enum import Enum
@@ -8,9 +9,10 @@ from py_auth import PyAuth
 from py_auth.schemas import CookieConfig
 from py_auth._utils import generate_csrf_token, generate_code_verifier, generate_nonce
 
-from .utils import raise_auth_exception, get_logger
+from ._utils import raise_auth_exception, get_logger
 
 class PyAuthFastAPI(APIRouter):
+    """FastAPI router for authentication endpoints with cookie-based session management."""
     def __init__(
         self,
         auth: PyAuth,

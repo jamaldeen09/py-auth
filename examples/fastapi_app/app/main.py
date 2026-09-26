@@ -89,9 +89,24 @@ async def lifespan(app: FastAPI):
 # Initialize FastAPI app and attach authentication routers
 app = FastAPI(lifespan=lifespan)
 auth_router = PyAuthFastAPI(auth)
-app.include_router(auth_router)
+app.include_router(auth_router) 
 
-# Example protected route requiring a valid active session
+# Standard protected read route (GET requests don't require CSRF protection)
 @app.get("/protected-route")
 def protected_route(session = Depends(auth_router.get_current_session())):
     return {"success": True, "session": session}
+
+# Sensitive write route (POST/PUT/DELETE requests requiring both session + CSRF verification)
+@app.post("/sensitive-action")
+def sensitive_action(session = Depends(auth_router.get_current_session(add_csrf_verification=True))):
+    """
+    This endpoint requires:
+    1. A valid session cookie.
+    2. A matching 'x-csrf-token' request header against the stored CSRF cookie 
+       (handled automatically by auth_router.get_current_session(add_csrf_verification=True)).
+    """
+    return {
+        "success": True, 
+        "message": "Sensitive write action performed successfully!",
+        "user_id": session.get("user_id")
+    }

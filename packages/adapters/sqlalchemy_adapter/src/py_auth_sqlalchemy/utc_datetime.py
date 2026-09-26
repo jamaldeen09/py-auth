@@ -1,3 +1,4 @@
+"""SQLAlchemy datetime type for consistent UTC-aware datetime handling across database backends."""
 
 from sqlalchemy import DateTime
 from datetime import datetime, timezone
@@ -5,30 +6,7 @@ from sqlalchemy.dialects.mysql import DATETIME
 from sqlalchemy.types import TypeDecorator
 
 class UTCDateTime(TypeDecorator):
-    """
-    SQLAlchemy datetime type that provides consistent UTC-aware datetimes
-    across supported database backends.
-
-    Python-side behavior:
-        Values are always expected to be timezone-aware and are normalized
-        to UTC before being stored.
-
-    PostgreSQL:
-        Uses a timezone-aware timestamp and preserves the UTC timezone.
-
-    MySQL:
-        MySQL DATETIME does not preserve timezone information. Values are
-        therefore converted to UTC and stored as naive UTC datetimes.
-        When read back, the UTC timezone is restored.
-
-    SQLite:
-        SQLite does not have a native timezone-aware datetime type. Values
-        are therefore handled like MySQL: stored as naive UTC datetimes and
-        returned to Python as timezone-aware UTC datetimes.
-
-    This allows the rest of py-auth to consistently work with timezone-aware
-    UTC datetimes without needing database-specific datetime handling.
-    """
+    """SQLAlchemy datetime type that provides consistent UTC-aware datetimes across supported database backends."""
 
     impl = DateTime
     cache_ok = True
