@@ -1,20 +1,18 @@
 FROM python:3.13-slim
+
 WORKDIR /app
 
 # Install packages
-RUN pip install --no-cache-dir bcrypt dotenv py-auth-fastapi py-auth-sqlalchemy uvicorn
+RUN pip install --no-cache-dir bcrypt dotenv py-auth-fastapi py-auth-sqlalchemy asyncpg
 
-# Create the non-root user with a home directory
+# Create non-root user
 RUN useradd -m app
 
-# Copy source code AND give ownership to the app user
-COPY --chown=app:app . /app
+# Copy ONLY the 'app' folder into our container's /app directory
+COPY --chown=app:app app /app/
 
-# Expose the application port
 EXPOSE 8000
-
-# Switch to the non-root user for execution
 USER app
 
-# Start the FastAPI app
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run FastAPI directly since main.py is now inside /app/main.py
+CMD ["fastapi", "dev", "main.py", "--host", "0.0.0.0", "--port", "8000"]
