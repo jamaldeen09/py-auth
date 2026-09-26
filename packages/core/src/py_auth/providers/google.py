@@ -1,3 +1,5 @@
+"""Google OAuth 2.0 and OpenID Connect provider implementation."""
+
 import httpx2
 
 from authlib.integrations.httpx_client import AsyncOAuth2Client

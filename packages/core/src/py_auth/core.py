@@ -1,3 +1,4 @@
+"""Core authentication manager for session handling and provider coordination."""
 
 
 from datetime import datetime, timedelta, timezone
@@ -31,6 +32,7 @@ class PyAuth:
         self.cookies = merge_cookie_config(user_config=cookies)
     
     async def handle_create_session (self, user_data: Dict[str, Any], provider: str) -> AuthResult:
+        """Create a new session for an authenticated user with collision detection and error handling."""
         max_retries = 3
         created_session = None
         expires = datetime.now(timezone.utc) + timedelta(days=30)
@@ -242,6 +244,7 @@ class PyAuth:
         return await self.handle_create_session(user_data=user_data, provider="GoogleProvider")
     
     def verify_csrf_double_submit (self, cookie_csrf_token: str, submitted_csrf_token: str) -> AuthResult:
+        """Validate CSRF token using double-submit pattern to prevent cross-site request forgery attacks."""
         if not cookie_csrf_token:
             return get_auth_result(
                 error={

@@ -1,6 +1,4 @@
-"""
-py-auth-fastapi: FastAPI integration for py-auth.
-"""
+"""FastAPI integration for py-auth authentication."""
 
 from .core import PyAuthFastAPI
 

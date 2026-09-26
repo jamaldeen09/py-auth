@@ -1,6 +1,8 @@
+"""Utility functions for token generation, hashing, and configuration management."""
+
 import hashlib, secrets, logging
 
-from typing import Any, Dict
+from typing import Any
 
 from .schemas import (
     AuthError, 

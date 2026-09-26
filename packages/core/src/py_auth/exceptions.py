@@ -1,3 +1,5 @@
+"""Custom exception classes for py-auth error handling."""
+
 class PyAuthError(Exception):
     """Base exception for all py-auth errors."""
 

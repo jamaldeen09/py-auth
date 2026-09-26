@@ -1,3 +1,5 @@
+"""Base provider class for authentication providers."""
+
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -14,4 +16,5 @@ class BaseProvider(ABC):
 
     @abstractmethod
     async def authenticate(self, *args: Any, **kwargs: Any) -> AuthResult:
+        """Authenticate a user using provider-specific authentication flow."""
         pass

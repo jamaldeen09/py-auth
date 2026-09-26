@@ -1,8 +1,6 @@
-"""
-Authentication providers for py-auth.
-"""
+"""Authentication providers for py-auth including credentials and OAuth implementations."""
 
-from .credentials import CredentialsProvider, ValidationError
+from .credentials import CredentialsProvider
 from .google import GoogleProvider
 
-__all__ = ["CredentialsProvider", "ValidationError", "GoogleProvider"]
+__all__ = ["CredentialsProvider", "GoogleProvider"]

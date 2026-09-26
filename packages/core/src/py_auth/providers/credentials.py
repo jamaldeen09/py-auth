@@ -1,3 +1,5 @@
+"""Credentials-based authentication provider for username/password authentication."""
+
 import inspect
 
 from pydantic import BaseModel, ValidationError as PydanticValidationError

@@ -1,3 +1,4 @@
+"""Default cookie configurations for authentication-related cookies."""
 
 
 from .schemas import CookieConfig, CookieOptions, PyAuthCookies

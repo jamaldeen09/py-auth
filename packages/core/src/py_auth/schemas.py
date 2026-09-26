@@ -1,3 +1,5 @@
+"""Pydantic schemas and protocols for type-safe authentication data structures."""
+
 import datetime
 
 from typing import (
@@ -13,16 +15,19 @@ from pydantic import BaseModel, ConfigDict, field_validator
 from .exceptions import ConfigurationError
 
 class AuthError(TypedDict, total=False):
+    """Structured error response with code, status code, message, and optional details."""
     code: str
     status_code: int
     message: str
     details: Dict[str, Any]
 
 class AuthResult(TypedDict, total=False):
+    """Standardized authentication result containing either data or error information."""
     data: Any | None
     error: AuthError | None
 
 class CookieOptionsInput(BaseModel):
+    """Optional cookie configuration for user customization."""
     http_only: bool | None = None
     secure: bool | None = None
     same_site: Literal["lax", "strict", "none"] | None = None
@@ -32,6 +37,7 @@ class CookieOptionsInput(BaseModel):
     expires: datetime.datetime | None = None
 
 class CookieOptions(BaseModel):
+    """Complete cookie configuration with all required security options."""
     http_only: bool
     secure: bool
     same_site: Literal["lax", "strict", "none"]
@@ -41,14 +47,17 @@ class CookieOptions(BaseModel):
     expires: datetime.datetime | None = None
 
 class CookieConfigInput(BaseModel):
+    """Cookie configuration with optional name and security options for user customization."""
     name: str | None = None
     options: CookieOptionsInput | None = None
 
 class CookieConfig(BaseModel):
+    """Complete cookie configuration with name and required security options."""
     name: str
     options: CookieOptions
 
 class PyAuthCookiesInput(BaseModel):
+    """Optional configuration for all authentication-related cookies."""
     session_token: CookieConfigInput | None = None
     csrf_token: CookieConfigInput | None  = None
     state: CookieConfigInput | None  = None
@@ -56,6 +65,7 @@ class PyAuthCookiesInput(BaseModel):
     nonce: CookieConfigInput | None  = None
 
 class PyAuthCookies(BaseModel):
+    """Complete configuration for all authentication-related cookies."""
     session_token: CookieConfig
     csrf_token: CookieConfig
     state: CookieConfig
@@ -70,24 +80,26 @@ class PyAuthAdapterProtocol(Protocol):
         email: str, 
         user_data: Dict[str, Any],
         account_data: Dict[str, Any]
-    ) -> Dict[str, Any] | None:...
+    ) -> Dict[str, Any] | None:...  
 
     async def create_user (self, user_data: Dict[str, Any]) -> Dict[str, Any] | None:...
     async def get_user_by_email (self, email: str) -> Dict[str, Any] | None:...
     async def get_user(self, user_id: str) -> Dict[str, Any] | None:...
+    async def delete_user(self, user_id: str) -> None:...
+    async def update_user(self, user_id: str, updates: Dict[str, Any]) -> Dict[str, Any] | None:...
 
     async def link_account(self, account_data: Dict[str, Any]) -> Dict[str, Any] | None:...
     async def unlink_account(self, provider: str, provider_account_id: str) -> None:...
-    async def delete_user(self, user_id: str) -> None:...
-
     async def list_accounts_for_user(self, user_id: str) -> List[(Dict[str, Any] | None)]:...
-    async def list_sessions_for_user(self, user_id: str) -> List[(Dict[str, Any] | None)]:...
 
+    async def list_sessions_for_user(self, user_id: str) -> List[(Dict[str, Any] | None)]:...
     async def create_session(self, session_data: Dict[str, Any]) -> Dict[str, Any] | None: ...
     async def get_session_by_session_token_hash(self, session_token_hash: str) -> Dict[str, Any] | None: ...
     async def delete_session_by_session_token_hash(self, session_token_hash: str) -> None: ...
     async def delete_session(self, session_id: str) -> None: ...
     async def update_session(self, session_id: str, updates: Dict[str, Any]) -> Dict[str, Any] | None: ...
+
+    async def get_or_create_user_and_link_account(self, email: str, user_data: Dict[str, Any], account_data: Dict[str, Any]) -> Dict[str, Any] | None:...
 
 
 class AdapterContainer(BaseModel):

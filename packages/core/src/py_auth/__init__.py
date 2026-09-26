@@ -1,8 +1,5 @@
-"""
-py-auth-core: Modular authentication primitives and provider framework for Python backends.
-"""
+"""Modular authentication primitives and provider framework for Python backends."""
 
-from ._base import BaseProvider
 from .core import PyAuth
 from .exceptions import (
     AdapterError,
@@ -29,14 +26,17 @@ from .schemas import (
 
 __all__ = [
     "PyAuth",
-    "BaseProvider",
-    "CredentialsProvider",
+
     "PyAuthError",
     "DuplicateEntryError",
     "ForeignKeyViolationError",
     "RecordNotFoundError",
     "AdapterError",
     "ConfigurationError",
+
+    "CredentialsProvider",
+    "GoogleProvider",
+
     "AuthError",
     "AuthResult",
     "CookieOptions",
@@ -44,7 +44,6 @@ __all__ = [
     "PyAuthCookiesInput",
     "PyAuthAdapterProtocol",
     "AdapterContainer",
-    "GoogleProvider",
     "CookieConfigInput",
     "PyAuthCookies",
     "CookieOptionsInput"
