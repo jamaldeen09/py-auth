@@ -16,7 +16,7 @@ from .models import Session, User, Account, Base
 from .utils import hash_password, verify_password
 
 # Load environment variables from .env file
-load_dotenv(find_dotenv())
+load_dotenv(find_dotenv()) 
 
 database_url = os.getenv("DATABASE_URL")
 google_client_id = os.getenv("GOOGLE_CLIENT_ID")

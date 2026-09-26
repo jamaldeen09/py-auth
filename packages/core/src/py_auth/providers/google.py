@@ -10,7 +10,7 @@ from joserfc.jwt import decode, JWTClaimsRegistry
 from joserfc.errors import (ClaimError,ExpiredTokenError,JoseError)
 
 from .._base import BaseProvider
-from .._utils import get_logger, get_auth_result, generate_token
+from .._utils import get_logger, get_auth_result
 from ..schemas import AuthResult
 
 class GoogleProvider (BaseProvider):
@@ -214,12 +214,12 @@ class GoogleProvider (BaseProvider):
         claims: Dict[str, Any] = validation_result.get("data") or {}
 
         provider_acc_id: str = claims["sub"]
-        user_email: str = claims["email"]
+        user_email: str = claims["email"].lower()
         name: str | None = claims.get("name", None)
         image: str | None = claims.get("picture", None)
 
         try:
-            user_data = {"email":user_email.lower(),"name":name,"image":image}
+            user_data = {"email":user_email,"name":name,"image":image}
             account_data = {"provider":"google","provider_account_id":provider_acc_id,**callback_result_data}
             result= await adapter.get_or_create_user_and_link_account(user_email,user_data,account_data)
             user_dict = result["user"]

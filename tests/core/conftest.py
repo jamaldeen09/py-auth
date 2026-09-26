@@ -16,20 +16,25 @@ def mock_adapter():
     but returns None unless I override the return value in the test.
     """
     adapter = AsyncMock()
-    adapter.get_or_create_user_and_link_account = AsyncMock()
+
     adapter.create_user = AsyncMock()
     adapter.get_user_by_email = AsyncMock()
     adapter.get_user = AsyncMock()
+    adapter.delete_user = AsyncMock()
+    adapter.update_user = AsyncMock()
+    
     adapter.link_account = AsyncMock()
     adapter.unlink_account = AsyncMock()
-    adapter.delete_user = AsyncMock()
     adapter.list_accounts_for_user = AsyncMock()
+
     adapter.list_sessions_for_user = AsyncMock()
     adapter.create_session = AsyncMock()
     adapter.get_session_by_session_token_hash = AsyncMock()
     adapter.delete_session_by_session_token_hash = AsyncMock()
     adapter.delete_session = AsyncMock()
     adapter.update_session = AsyncMock()
+
+    adapter.get_or_create_user_and_link_account = AsyncMock()
     return adapter
 
 @pytest.fixture

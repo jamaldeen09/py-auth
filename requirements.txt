@@ -36,10 +36,6 @@ MarkupSafe==3.0.3
 mdurl==0.1.2
 packaging==26.3
 pluggy==1.6.0
--e git+https://github.com/jamaldeen09/py-auth@2e283739d17c0e8c91338a595dd42eee9c40553d#egg=py_auth
-py-auth-core @ file:///Users/macbook/open-source-tools/py-auth-fresh/packages/core
-py-auth-fastapi @ file:///Users/macbook/open-source-tools/py-auth-fresh/packages/integrations/fastapi_integration
-py-auth-sqlalchemy @ file:///Users/macbook/open-source-tools/py-auth-fresh/packages/adapters/sqlalchemy_adapter
 pycparser==3.0
 pydantic==2.13.5
 pydantic-extra-types==2.11.1

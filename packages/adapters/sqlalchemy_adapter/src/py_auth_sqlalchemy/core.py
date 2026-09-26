@@ -3,7 +3,7 @@ from ._utils import handle_db_errors, validate_async_engine, validate_sqlalchemy
 from typing import Any, Dict, Type, List
 from sqlalchemy import delete, select, and_
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
-from py_auth.exceptions import AdapterError
+from py_auth.exceptions import AdapterError, DuplicateEntryError
 
 class SqlAlchemyAdapter:
     """
@@ -318,22 +318,41 @@ class SqlAlchemyAdapter:
                 "but 'account_model' is not configured."
             )
         
+        lookup_email = (user_data.get("email") or email).lower()
+        user_data = {**user_data, "email": lookup_email}
+
         async with handle_db_errors(operation="get_or_create_user_and_link_account"):
             async with self.session_maker() as session:
                 async with session.begin():
-                    result = await session.execute(select(self.user_model).where(self.user_model.email == email))
-                    user = result.scalar_one_or_none()
+                    user_result = await session.execute(
+                        select(self.user_model).where(self.user_model.email == lookup_email)
+                    )
+                    user = user_result.scalar_one_or_none()
 
                     if user is None:
                         user = self.user_model(**user_data)
                         session.add(user)
                         await session.flush()
 
-                    account = self.account_model(**account_data,user_id=user.id)
-                    session.add(account)
-                    await session.flush()
+                    provider = account_data["provider"]
+                    provider_account_id = account_data["provider_account_id"]
+                    account_result = await session.execute(select(self.account_model).where(
+                        self.account_model.provider == provider,
+                        self.account_model.provider_account_id == provider_account_id,
+                    ))
+                    account = account_result.scalar_one_or_none()
+
+                    if account is None:
+                        account = self.account_model(**account_data, user_id=user.id)
+                        session.add(account)
+                        await session.flush()
+
+                    elif account.user_id != user.id:
+                        raise DuplicateEntryError(
+                            "This social account is already linked to another user profile."
+                        )
 
                     user_dict = self._row_to_dict(user)
                     account_dict = self._row_to_dict(account)
-                    return {"user":user_dict,"account":account_dict}
+                    return {"user": user_dict, "account": account_dict}
     

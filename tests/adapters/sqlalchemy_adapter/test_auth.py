@@ -70,18 +70,3 @@ async def test_get_or_create_user_and_link_account_multiple_providers(user_data,
     assert len(linked_accounts) == 2
     providers = {acc["provider"] for acc in linked_accounts}
     assert providers == {"google", "github"}
-
-@pytest.mark.asyncio
-async def test_get_or_create_user_and_link_account_duplicate_account(user_data, account_data, adapter):
-    """Verify that attempting to link the same provider account twice raises DuplicateEntryError."""
-    user_payload = user_data()
-    account_payload = account_data()
-
-    await adapter.get_or_create_user_and_link_account(
-        user_payload["email"], user_payload, account_payload
-    )
-
-    with pytest.raises(DuplicateEntryError):
-        await adapter.get_or_create_user_and_link_account(
-            user_payload["email"], user_payload, account_payload
-        )
